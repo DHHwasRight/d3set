@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { ChartFactory, ColumnSpec } from "./types";
-import { aggregate } from "./util";
+import { aggregate, matchThreshold, thresholdColor } from "./util";
 
 type Sort = { field: string; dir: "ascending" | "descending" } | undefined;
 
@@ -9,9 +9,11 @@ type Sort = { field: string; dir: "ascending" | "descending" } | undefined;
  * A sortable table.
  * - Raw mode (default): one line per row. Pick fields with `columns`.
  * - Group mode (`x` and `aggregate` set): one line per `x` value (and `series` value), with the aggregate of `y`.
+ * Column `thresholds` (or spec `thresholds` for the group metric) color numbers.
  * `limit` caps the number of lines (default 100). Click a header to sort.
  */
-export const tableChart: ChartFactory = (el, spec) => {
+export const tableChart: ChartFactory = (el, spec, ctx) => {
+  let theme = ctx.theme;
   el.classList.add("d3s-chart");
   el.style.height = `${spec.height ?? 240}px`;
   const wrap = document.createElement("div");
@@ -35,7 +37,11 @@ export const tableChart: ChartFactory = (el, spec) => {
       const keys = [x, ...(spec.series ? [spec.series] : [])];
       const groups = d3.rollups(
         input,
-        (v) => aggregate(v.map((r) => Number(r[y])), spec.aggregate!),
+        (v) =>
+          aggregate(
+            v.map((r) => Number(r[y])),
+            spec.aggregate!,
+          ),
         (r) => keys.map((k) => String(r[k])).join("\u0000"),
       );
       const metric = `${spec.aggregate}(${y})`;
@@ -43,7 +49,10 @@ export const tableChart: ChartFactory = (el, spec) => {
         const parts = key.split("\u0000");
         return { ...Object.fromEntries(keys.map((k, i) => [k, parts[i]])), [metric]: value } as Row;
       });
-      const columns = spec.columns ?? [...keys.map((field) => ({ field })), { field: metric, format: spec.format }];
+      const columns = spec.columns ?? [
+        ...keys.map((field) => ({ field })),
+        { field: metric, format: spec.format, thresholds: spec.thresholds },
+      ];
       return { columns, lines };
     }
     const first = input[0] ?? {};
@@ -51,7 +60,9 @@ export const tableChart: ChartFactory = (el, spec) => {
   }
 
   const compare = (a: unknown, b: unknown) =>
-    typeof a === "number" && typeof b === "number" ? a - b : String(a ?? "").localeCompare(String(b ?? ""), undefined, { numeric: true });
+    typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a ?? "").localeCompare(String(b ?? ""), undefined, { numeric: true });
 
   function render() {
     const { columns, lines } = shape(rows);
@@ -91,6 +102,13 @@ export const tableChart: ChartFactory = (el, spec) => {
           const f = formatters[i];
           td.textContent = v === undefined || v === null ? "" : f && typeof v === "number" ? f(v) : String(v);
           td.style.textAlign = c.align ?? (isNumeric[i] ? "right" : "left");
+          if (c.thresholds && typeof v === "number") {
+            const t = matchThreshold(v, c.thresholds);
+            if (t) {
+              td.style.color = thresholdColor(theme, t);
+              td.style.fontWeight = "600";
+            }
+          }
           tr.append(td);
         });
         return tr;
@@ -103,7 +121,10 @@ export const tableChart: ChartFactory = (el, spec) => {
       rows = next;
       render();
     },
-    setTheme() {},
+    setTheme(next) {
+      theme = next;
+      render();
+    },
     destroy: () => wrap.remove(),
   };
 };

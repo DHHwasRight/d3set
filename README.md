@@ -27,7 +27,7 @@ createDashboard(document.getElementById("app")!, {
 
 ```sh
 npm install
-npm run serve:sse   # terminal 1: fake sales stream on :8787
+npm run serve:sse   # terminal 1: fake sales (/stream) and request logs (/ops) on :8787
 npm run dev         # terminal 2: demo page
 ```
 
@@ -88,28 +88,66 @@ Read or set filters from code: `dashboard.filters.set("region", ["EU"])`.
 ## Charts
 
 Every spec takes `type`, `title`, `height`, `format` (d3-format), and `span` (dashboard columns, 1 to 3).
-Hover shows a tooltip on every chart except `kpi`, `gauge`, and `table`.
+Hover shows a tooltip on SVG charts. HTML views (`table`, `toplist`, `status`, `stream`, ...) use native titles.
+
+### Monitoring views (Datadog-style)
 
 | Type | Shows | Reads | Default aggregate |
 | --- | --- | --- | --- |
-| `line` | Trend over time or a number axis | `x`, `y`, `series` | last value per x |
-| `area` | Stacked trend (`stacked: false` overlaps) | `x`, `y`, `series`, `stacked` | last value per x |
+| `timeseries` | Values over time as `display: line \| area \| bars`, auto time buckets, threshold markers | `x`, `y`, `series`, `interval`, `display`, `thresholds` | `sum` |
+| `toplist` | Ranked list with bars | `x`, `y`, `limit`, `thresholds`, `options.ascending` | `sum` |
+| `change` | Last `window` vs the window before, per `series` | `x`, `y`, `series`, `window`, `decreaseIsGood` | `sum` |
+| `timeheatmap` | Value distribution over time (time × value bins, color = count) | `x`, `y`, `interval`, `bins` | count |
+| `hostmap` | One hexagon per entity, grouped by `series` | `x`, `y`, `series`, `thresholds` | `last` |
+| `status` | Latest check state per entity, worst first | `x`, `y` (level or number + `thresholds`), `series` (time field) | last row |
+| `stream` | Event / log stream, newest first | `x` (time), `y` (message), `series` (level), `columns` (tags) | none |
+| `slo` | Good share vs target, error budget left | `y`, `objective: { good, target }` | ratio |
+| `note` | Static text | `text` | – |
+
+### General charts
+
+| Type | Shows | Reads | Default aggregate |
+| --- | --- | --- | --- |
+| `line` | Trend over time or a number axis | `x`, `y`, `series`, `interval` | last value per x |
+| `area` | Stacked trend (`stacked: false` overlaps) | `x`, `y`, `series`, `stacked`, `interval` | last value per x |
 | `bar` | Values per category, grouped or `stacked`, `horizontal` | `x`, `y`, `series`, `limit` | `sum` |
 | `pie` / `donut` | Share of a total | `x`, `y`, `innerRadius`, `limit` | `sum` |
+| `sunburst` | Two-level share: inner ring `series`, outer ring `x` | `x`, `series`, `y` | `sum` |
 | `scatter` | One dot per row, bubble with `size` | `x`, `y`, `size`, `series`, `limit` | none |
 | `heatmap` | `x` columns × `series` rows, colored by value | `x`, `series`, `y` | `sum` |
 | `histogram` | Distribution of one number | `y`, `bins` | count |
 | `boxplot` | Quartiles, 1.5 × IQR whiskers, outliers per category | `x`, `y` | none |
 | `treemap` | Nested rectangles by size, grouped by `series` | `x`, `y`, `series`, `limit` | `sum` |
 | `funnel` | Stage conversion (`options.sort: true` sorts by value) | `x`, `y` | `sum` |
-| `gauge` | One value on a `min`–`max` arc | `y`, `min`, `max` | `sum` |
-| `kpi` | Big number; with `x`, a trend line and change vs previous x | `y`, `x` | `sum` |
-| `table` | Sortable rows; with `x` + `aggregate`, one line per group | `columns`, `x`, `y`, `series`, `limit` | none |
+| `gauge` | One value on a `min`–`max` arc, threshold ticks | `y`, `min`, `max`, `thresholds` | `sum` |
+| `kpi` | Big number; with `x`, a trend line and change vs previous x | `y`, `x`, `interval`, `thresholds` | `sum` |
+| `table` | Sortable rows; with `x` + `aggregate`, one line per group | `columns`, `x`, `y`, `series`, `limit`, `thresholds` | none |
+
+### Time buckets
+
+`interval: "30s" | "5m" | "1h" | "1d" | "auto"` puts dates into buckets (UTC-aligned) before the aggregate.
+`auto` picks a nice interval for about 60 buckets. `timeseries` uses `auto` by default.
+
+### Thresholds (conditional formats)
+
+```ts
+const latency = [
+  { op: ">", value: 500, level: "critical" },
+  { op: ">", value: 250, level: "warning", label: "SLA" },
+];
+{ type: "timeseries", x: "at", y: "latency", aggregate: "avg", thresholds: latency } // marker lines
+{ type: "kpi", y: "latency", aggregate: "avg", thresholds: latency }                 // colored number
+```
+
+Rules are tested in order; the first match wins. `level` maps to the theme tokens
+`color.positive` (ok), `color.warning`, and `color.negative` (critical). `color` overrides it.
 
 `aggregate` is one of `sum | count | avg | min | max | last`.
 `limit` keeps the largest categories and groups the rest into "Other" (for `table`: max lines; for `scatter`: last N rows).
 
-Theme tokens for charts: `color.series` (categories), `color.sequential` (heatmap, gauge), `color.positive` / `color.negative` (KPI change).
+Theme tokens for charts: `color.series` (categories), `color.sequential` (heatmaps, gauge), `color.positive` / `color.warning` / `color.negative` (status, thresholds, changes).
+
+Animation: with `theme.motion: 0` or `prefers-reduced-motion`, charts draw at once with no transition.
 
 Add your own chart type. It gets the same theme, data, and filters:
 
@@ -134,3 +172,4 @@ registerChart("table", (el, spec, { theme }) => ({
 | `npm run build` | `dist/d3set.js`, `dist/d3set.css`, type declarations |
 | `npm test` | Vitest + jsdom |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run format` | Prettier |

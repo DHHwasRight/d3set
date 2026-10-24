@@ -3,12 +3,30 @@ import type { Theme } from "../theme/theme";
 
 export type Aggregate = "sum" | "count" | "avg" | "min" | "max" | "last";
 
+export type Level = "ok" | "warning" | "critical";
+
+/**
+ * A conditional format rule, like Datadog conditional formats and markers.
+ * Rules are tested in order; the first match wins.
+ */
+export interface Threshold {
+  op: ">" | ">=" | "<" | "<=" | "=";
+  value: number;
+  level?: Level;
+  /** Overrides the level color. */
+  color?: string;
+  /** Text on time series markers and status tiles. */
+  label?: string;
+}
+
 export interface ColumnSpec {
   field: string;
   label?: string;
   /** d3-format string for numbers. */
   format?: string;
   align?: "left" | "center" | "right";
+  /** Conditional text color for numbers in this column. */
+  thresholds?: Threshold[];
 }
 
 /**
@@ -33,6 +51,26 @@ export interface ChartSpec {
   height?: number;
   /** Dashboard grid: number of columns the card takes (1 to 3). Default: 1. */
   span?: 1 | 2 | 3;
+
+  /**
+   * Time charts: bucket x values (dates) by this interval, for example `10s`, `1m`, `5m`, `1h`, `1d`.
+   * `auto` picks an interval that gives about 60 buckets. `timeseries` uses `auto` by default.
+   */
+  interval?: string;
+  /**
+   * `slo`: a row is good when `y` passes the `good` rule. `target` is the objective in percent (for example 99.9).
+   */
+  objective?: { good: Pick<Threshold, "op" | "value">; target: number };
+  /** `change`: compare the last `window` with the one before it, for example `5m` or `1d`. Default: `1h`. */
+  window?: string;
+  /** `change`: `true` when a decrease is good (latency, errors). Default: false. */
+  decreaseIsGood?: boolean;
+  /** `note`: the text to show. Blank lines split paragraphs. */
+  text?: string;
+  /** `timeseries`: how to draw the series. Default: `line`. */
+  display?: "line" | "area" | "bars";
+  /** Conditional colors (kpi, gauge, toplist, table, status, hostmap) and marker lines (timeseries). */
+  thresholds?: Threshold[];
 
   /** `scatter`: field for the point area (bubble chart). */
   size?: string;

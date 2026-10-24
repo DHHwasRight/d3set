@@ -26,6 +26,16 @@ export {
 export { renderFilterBar } from "./filters/bar";
 
 export {
+  changeChart,
+  hostmapChart,
+  noteChart,
+  sloChart,
+  statusChart,
+  streamChart,
+  sunburstChart,
+  timeheatmapChart,
+  timeseriesChart,
+  toplistChart,
   areaChart,
   barChart,
   boxplotChart,
@@ -44,4 +54,13 @@ export {
   tableChart,
   treemapChart,
 } from "./charts/index";
-export type { Aggregate, Chart, ChartContext, ChartFactory, ChartSpec, ColumnSpec } from "./charts/types";
+export type {
+  Aggregate,
+  Chart,
+  ChartContext,
+  ChartFactory,
+  ChartSpec,
+  ColumnSpec,
+  Level,
+  Threshold,
+} from "./charts/types";

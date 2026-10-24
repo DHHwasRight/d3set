@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { bindTooltip, createFrame, createTooltip, createXYLayers, motionMs, need, renderAxes } from "./util";
+import { bindTooltip, createFrame, createTooltip, createXYLayers, motionMs, need, renderAxes, animate } from "./util";
 
 /** Distribution of the numeric field `y` in `bins` buckets (default 20). */
 export const histogramChart: ChartFactory = (el, spec, ctx) => {
@@ -13,7 +13,7 @@ export const histogramChart: ChartFactory = (el, spec, ctx) => {
   const layers = createXYLayers(frame);
   const tooltip = createTooltip(el);
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     const ext = d3.extent(values) as [number, number] | [undefined, undefined];
     const x = d3
@@ -31,7 +31,13 @@ export const histogramChart: ChartFactory = (el, spec, ctx) => {
       .nice()
       .range([h, 0]);
     renderAxes(layers, x as never, y as never, { w, h, fmt: d3.format("~s") });
-    layers.xAxis.call(d3.axisBottom(x).ticks(Math.max(2, w / 80)).tickFormat((v) => fmt(v as number)).tickSizeOuter(0));
+    layers.xAxis.call(
+      d3
+        .axisBottom(x)
+        .ticks(Math.max(2, w / 80))
+        .tickFormat((v) => fmt(v as number))
+        .tickSizeOuter(0),
+    );
 
     layers.plot
       .selectAll<SVGRectElement, d3.Bin<number, number>>("rect")
@@ -41,10 +47,11 @@ export const histogramChart: ChartFactory = (el, spec, ctx) => {
       .attr("x", (b) => x(b.x0!) + 1)
       .attr("width", (b) => Math.max(0, x(b.x1!) - x(b.x0!) - 1))
       .call((s) => bindTooltip(s, tooltip, (b) => [`${fmt(b.x0!)} – ${fmt(b.x1!)}`, `${b.length} rows`]))
-      .transition()
-      .duration(animate ? motionMs(theme) : 0)
-      .attr("y", (b) => y(b.length))
-      .attr("height", (b) => h - y(b.length));
+      .call((s) =>
+        animate(s, animated ? motionMs(theme) : 0)
+          .attr("y", (b) => y(b.length))
+          .attr("height", (b) => h - y(b.length)),
+      );
   }
 
   return {

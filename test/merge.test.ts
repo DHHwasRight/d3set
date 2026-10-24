@@ -12,11 +12,25 @@ describe("mergeRows", () => {
   });
 
   it("upserts by key", () => {
-    const out = mergeRows([{ id: "a", v: 1 }, { id: "b", v: 2 }], [{ id: "b", v: 5 }, { id: "c", v: 7 }], {
-      mode: "upsert",
-      key: "id",
-    });
-    expect(out).toEqual([{ id: "a", v: 1 }, { id: "b", v: 5 }, { id: "c", v: 7 }]);
+    const out = mergeRows(
+      [
+        { id: "a", v: 1 },
+        { id: "b", v: 2 },
+      ],
+      [
+        { id: "b", v: 5 },
+        { id: "c", v: 7 },
+      ],
+      {
+        mode: "upsert",
+        key: "id",
+      },
+    );
+    expect(out).toEqual([
+      { id: "a", v: 1 },
+      { id: "b", v: 5 },
+      { id: "c", v: 7 },
+    ]);
   });
 
   it("uses the envelope op from the server", () => {

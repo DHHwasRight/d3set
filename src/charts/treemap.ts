@@ -1,6 +1,19 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { aggregate, bindTooltip, createFrame, createLegend, createTooltip, motionMs, need, seriesColor, textOn, topN, tweenTranslate } from "./util";
+import {
+  aggregate,
+  bindTooltip,
+  createFrame,
+  createLegend,
+  createTooltip,
+  motionMs,
+  need,
+  seriesColor,
+  textOn,
+  topN,
+  tweenTranslate,
+  animate,
+} from "./util";
 
 interface Node {
   name: string;
@@ -25,19 +38,24 @@ export const treemapChart: ChartFactory = (el, spec, ctx) => {
   const legend = createLegend(el);
   const tooltip = createTooltip(el);
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     const hierarchy = d3
       .hierarchy(root)
       .sum((d) => Math.max(0, d.value ?? 0))
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
-    const layout = d3.treemap<Node>().size([w, h]).paddingInner(2).paddingTop(spec.series ? 2 : 0).round(true)(hierarchy);
+    const layout = d3
+      .treemap<Node>()
+      .size([w, h])
+      .paddingInner(2)
+      .paddingTop(spec.series ? 2 : 0)
+      .round(true)(hierarchy);
     // An empty tree has the root as its only leaf: skip it.
     const leaves = layout.leaves().filter((n) => n.depth === (spec.series ? 2 : 1));
     const groupOf = (n: d3.HierarchyRectangularNode<Node>) => (spec.series ? n.parent!.data.name : n.data.name);
     const groups = [...new Set(leaves.map(groupOf))];
     const color = seriesColor(theme, groups);
-    const ms = animate ? motionMs(theme) : 0;
+    const ms = animated ? motionMs(theme) : 0;
     const total = hierarchy.value ?? 0;
 
     const cell = g
@@ -46,7 +64,9 @@ export const treemapChart: ChartFactory = (el, spec, ctx) => {
       .join((enter) => {
         const e = enter.append("g").attr("class", "d3s-leaf");
         e.append("rect");
-        e.append("clipPath").attr("id", () => `d3s-clip-${Math.random().toString(36).slice(2)}`).append("rect");
+        e.append("clipPath")
+          .attr("id", () => `d3s-clip-${Math.random().toString(36).slice(2)}`)
+          .append("rect");
         e.append("text").attr("class", "d3s-label");
         return e;
       });
@@ -56,16 +76,20 @@ export const treemapChart: ChartFactory = (el, spec, ctx) => {
         `${fmt(n.value ?? 0)} (${d3.format(".1%")(total ? (n.value ?? 0) / total : 0)})`,
       ]),
     );
-    cell.transition().duration(ms).call((t) => tweenTranslate(t, (n) => [n.x0, n.y0]));
+    tweenTranslate(cell, ms, (n) => [n.x0, n.y0]);
     cell
       .select("rect")
       .attr("fill", (n) => color(groupOf(n)))
       .attr("rx", Math.min(3, theme.radius))
-      .transition()
-      .duration(ms)
+      .call((s) =>
+        animate(s, ms)
+          .attr("width", (n) => n.x1 - n.x0)
+          .attr("height", (n) => n.y1 - n.y0),
+      );
+    cell
+      .select("clipPath rect")
       .attr("width", (n) => n.x1 - n.x0)
       .attr("height", (n) => n.y1 - n.y0);
-    cell.select("clipPath rect").attr("width", (n) => n.x1 - n.x0).attr("height", (n) => n.y1 - n.y0);
     cell
       .select<SVGTextElement>("text")
       .attr("clip-path", function () {
@@ -82,18 +106,32 @@ export const treemapChart: ChartFactory = (el, spec, ctx) => {
 
   return {
     update(rows) {
-      const agg = (v: typeof rows) => aggregate(v.map((r) => Number(r[yField])), how);
+      const agg = (v: typeof rows) =>
+        aggregate(
+          v.map((r) => Number(r[yField])),
+          how,
+        );
       if (spec.series) {
         const s = spec.series;
         root = {
           name: "root",
-          children: d3.rollups(rows, agg, (r) => String(r[s]), (r) => String(r[xField])).map(([name, inner]) => ({
-            name,
-            children: inner.map(([leaf, value]) => ({ name: leaf, value })),
-          })),
+          children: d3
+            .rollups(
+              rows,
+              agg,
+              (r) => String(r[s]),
+              (r) => String(r[xField]),
+            )
+            .map(([name, inner]) => ({
+              name,
+              children: inner.map(([leaf, value]) => ({ name: leaf, value })),
+            })),
         };
       } else {
-        const entries = topN(d3.rollups(rows, agg, (r) => String(r[xField])), spec.limit);
+        const entries = topN(
+          d3.rollups(rows, agg, (r) => String(r[xField])),
+          spec.limit,
+        );
         root = { name: "root", children: entries.map(([name, value]) => ({ name, value })) };
       }
       draw();

@@ -1,6 +1,17 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { bindTooltip, createFrame, createTooltip, createXYLayers, motionMs, need, renderAxes, seriesColor, tweenTranslate } from "./util";
+import {
+  bindTooltip,
+  createFrame,
+  createTooltip,
+  createXYLayers,
+  motionMs,
+  need,
+  renderAxes,
+  seriesColor,
+  tweenTranslate,
+  animate,
+} from "./util";
 
 interface Box {
   category: string;
@@ -45,14 +56,21 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
     };
   }
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
-    const x = d3.scaleBand().domain(boxes.map((b) => b.category)).range([0, w]).padding(0.4);
+    const x = d3
+      .scaleBand()
+      .domain(boxes.map((b) => b.category))
+      .range([0, w])
+      .padding(0.4);
     const lo = d3.min(boxes, (b) => Math.min(b.lo, ...b.outliers)) ?? 0;
     const hi = d3.max(boxes, (b) => Math.max(b.hi, ...b.outliers)) ?? 1;
     const y = d3.scaleLinear().domain([lo, hi]).nice().range([h, 0]);
-    const color = seriesColor(theme, boxes.map((b) => b.category));
-    const ms = animate ? motionMs(theme) : 0;
+    const color = seriesColor(
+      theme,
+      boxes.map((b) => b.category),
+    );
+    const ms = animated ? motionMs(theme) : 0;
     renderAxes(layers, x as never, y as never, { w, h, fmt });
 
     const g = layers.plot
@@ -73,34 +91,37 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
           `Q1 ${fmt(b.q1)} · min ${fmt(b.lo)}`,
         ]),
       );
-    g.transition().duration(ms).call((t) => tweenTranslate(t, (b) => [x(b.category) ?? 0, 0]));
+    tweenTranslate(g, ms, (b) => [x(b.category) ?? 0, 0]);
     const bw = x.bandwidth();
     g.select("line.whisker")
       .attr("stroke", "var(--d3s-axis)")
       .attr("x1", bw / 2)
       .attr("x2", bw / 2)
-      .transition()
-      .duration(ms)
-      .attr("y1", (b) => y(b.lo))
-      .attr("y2", (b) => y(b.hi));
+      .call((s) =>
+        animate(s, ms)
+          .attr("y1", (b) => y(b.lo))
+          .attr("y2", (b) => y(b.hi)),
+      );
     g.select("rect")
       .attr("fill", (b) => color(b.category))
       .attr("fill-opacity", 0.35)
       .attr("stroke", (b) => color(b.category))
       .attr("rx", Math.min(3, theme.radius))
       .attr("width", bw)
-      .transition()
-      .duration(ms)
-      .attr("y", (b) => y(b.q3))
-      .attr("height", (b) => Math.max(1, y(b.q1) - y(b.q3)));
+      .call((s) =>
+        animate(s, ms)
+          .attr("y", (b) => y(b.q3))
+          .attr("height", (b) => Math.max(1, y(b.q1) - y(b.q3))),
+      );
     g.select("line.median")
       .attr("stroke", (b) => color(b.category))
       .attr("stroke-width", 2)
       .attr("x2", bw)
-      .transition()
-      .duration(ms)
-      .attr("y1", (b) => y(b.median))
-      .attr("y2", (b) => y(b.median));
+      .call((s) =>
+        animate(s, ms)
+          .attr("y1", (b) => y(b.median))
+          .attr("y2", (b) => y(b.median)),
+      );
     g.selectAll<SVGCircleElement, number>("circle")
       .data((b) => b.outliers.map((v) => v))
       .join("circle")

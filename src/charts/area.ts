@@ -1,7 +1,18 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { formatX, toSeriesData, xHover, xScale, type SeriesData, type XValue } from "./xy";
-import { createFrame, createLegend, createTooltip, createXYLayers, motionMs, need, renderAxes, seriesColor } from "./util";
+import {
+  createFrame,
+  createLegend,
+  createTooltip,
+  createXYLayers,
+  motionMs,
+  need,
+  renderAxes,
+  renderMarkers,
+  seriesColor,
+  animate,
+} from "./util";
 
 interface Band {
   key: string;
@@ -37,7 +48,7 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
     },
   );
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     x = xScale(data, w);
     // Missing points count as 0 so stacks stay continuous.
@@ -52,7 +63,11 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
           .map((s) => ({ key: s.key, points: s.map((p, i) => ({ x: data.xs[i]!, y0: p[0], y1: p[1] })) }))
       : data.keys.map((k) => ({ key: k, points: wide.map((d, i) => ({ x: data.xs[i]!, y0: 0, y1: d[k] ?? 0 })) }));
     const top = d3.max(bands, (b) => d3.max(b.points, (p) => p.y1)) ?? 1;
-    const y = d3.scaleLinear().domain([0, top || 1]).nice().range([h, 0]);
+    const y = d3
+      .scaleLinear()
+      .domain([0, top || 1])
+      .nice()
+      .range([h, 0]);
     const color = seriesColor(theme, data.keys);
     renderAxes(layers, x as never, y as never, { w, h, fmt });
     hover.resize(w, h);
@@ -72,10 +87,9 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
       .attr("fill-opacity", stacked ? 0.85 : 0.35)
       .attr("stroke", (d) => color(d.key))
       .attr("stroke-width", stacked ? 0 : 1.5)
-      .transition()
-      .duration(animate ? motionMs(theme) : 0)
-      .attr("d", (d) => area(d.points));
+      .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", (d) => area(d.points)));
 
+    renderMarkers(layers.plot, y, w, theme, spec.thresholds, fmt);
     legend.update(data.keys, color);
   }
 

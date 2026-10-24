@@ -1,3 +1,13 @@
+import { changeChart } from "./change";
+import { hostmapChart } from "./hostmap";
+import { noteChart } from "./note";
+import { sloChart } from "./slo";
+import { statusChart } from "./status";
+import { streamChart } from "./stream";
+import { sunburstChart } from "./sunburst";
+import { timeheatmapChart } from "./timeheatmap";
+import { timeseriesChart } from "./timeseries";
+import { toplistChart } from "./toplist";
 import { areaChart } from "./area";
 import { barChart } from "./bar";
 import { boxplotChart } from "./boxplot";
@@ -14,6 +24,7 @@ import { tableChart } from "./table";
 import { treemapChart } from "./treemap";
 
 export const builtInCharts = {
+  timeseries: timeseriesChart,
   line: lineChart,
   area: areaChart,
   bar: barChart,
@@ -28,11 +39,30 @@ export const builtInCharts = {
   gauge: gaugeChart,
   kpi: kpiChart,
   table: tableChart,
+  toplist: toplistChart,
+  change: changeChart,
+  timeheatmap: timeheatmapChart,
+  hostmap: hostmapChart,
+  status: statusChart,
+  stream: streamChart,
+  sunburst: sunburstChart,
+  slo: sloChart,
+  note: noteChart,
 };
 
 for (const [type, factory] of Object.entries(builtInCharts)) registerChart(type, factory);
 
 export {
+  changeChart,
+  hostmapChart,
+  noteChart,
+  sloChart,
+  statusChart,
+  streamChart,
+  sunburstChart,
+  timeheatmapChart,
+  timeseriesChart,
+  toplistChart,
   areaChart,
   barChart,
   boxplotChart,

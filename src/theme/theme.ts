@@ -14,8 +14,9 @@ export interface Theme {
     grid: string;
     axis: string;
     accent: string;
-    /** Good and bad changes (KPI deltas). */
+    /** Status colors: good changes and `ok`, `warning`, bad changes and `critical`. */
     positive: string;
+    warning: string;
     negative: string;
     /** Categorical palette, used in order for series. */
     series: string[];
@@ -45,6 +46,7 @@ export const lightTheme: Theme = {
     axis: "#9a9aa5",
     accent: "#4f46e5",
     positive: "#059669",
+    warning: "#d97706",
     negative: "#dc2626",
     series: ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#a855f7", "#64748b"],
     sequential: ["#eef2ff", "#3730a3"],
@@ -66,13 +68,16 @@ export const darkTheme: Theme = {
     axis: "#5c5c66",
     accent: "#818cf8",
     positive: "#34d399",
+    warning: "#fbbf24",
     negative: "#f87171",
     series: ["#818cf8", "#38bdf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#94a3b8"],
     sequential: ["#1e1b4b", "#a5b4fc"],
   },
 };
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends unknown[] ? T[K] : DeepPartial<T[K]>) : T[K] };
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? (T[K] extends unknown[] ? T[K] : DeepPartial<T[K]>) : T[K];
+};
 
 /** Build a theme from a base and a partial override. */
 export function createTheme(overrides: DeepPartial<Theme>, base: Theme = lightTheme): Theme {
@@ -100,6 +105,7 @@ export function themeToCssVars(theme: Theme): Record<string, string> {
     "--d3s-axis": theme.color.axis,
     "--d3s-accent": theme.color.accent,
     "--d3s-positive": theme.color.positive,
+    "--d3s-warning": theme.color.warning,
     "--d3s-negative": theme.color.negative,
     "--d3s-radius": `${theme.radius}px`,
     "--d3s-space-sm": `${theme.space.sm}px`,

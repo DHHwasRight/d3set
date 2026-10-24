@@ -1,13 +1,16 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { toSeriesData } from "./xy";
-import { aggregate, need } from "./util";
+import { aggregate, need, valueColor } from "./util";
 
 /**
  * A big number: the aggregate of `y` over all rows (default `sum`).
+ * `thresholds` color the number.
  * With `x`, it also shows a trend line per x value and the change of the last x value against the one before.
  */
-export const kpiChart: ChartFactory = (el, spec) => {
+export const kpiChart: ChartFactory = (el, spec, ctx) => {
+  let theme = ctx.theme;
+  let current = 0;
   const yField = need(spec, "y");
   const how = spec.aggregate ?? "sum";
   el.classList.add("d3s-chart", "d3s-kpi");
@@ -23,20 +26,44 @@ export const kpiChart: ChartFactory = (el, spec) => {
   const fmt = d3.format(spec.format ?? ",.0f");
 
   let svg: d3.Selection<SVGSVGElement, unknown, null, undefined> | undefined;
-  if (spec.x) svg = d3.select(el).append("svg").attr("class", "d3s-kpi-trend").attr("preserveAspectRatio", "none").attr("viewBox", "0 0 100 30");
+  if (spec.x)
+    svg = d3
+      .select(el)
+      .append("svg")
+      .attr("class", "d3s-kpi-trend")
+      .attr("preserveAspectRatio", "none")
+      .attr("viewBox", "0 0 100 30");
 
   return {
     update(rows) {
-      value.textContent = fmt(aggregate(rows.map((r) => Number(r[yField])), how));
+      current = aggregate(
+        rows.map((r) => Number(r[yField])),
+        how,
+      );
+      value.textContent = fmt(current);
+      value.style.color = valueColor(theme, current, spec.thresholds, "");
       if (!spec.x || !svg) return;
 
       // One point per x value, aggregated with the same rule as the big number.
       const data = toSeriesData(rows, { ...spec, series: undefined, aggregate: how }, spec.x, yField);
       const points = data.xs.map((x) => [+x, data.table.get(+x)!.get(yField) ?? 0] as [number, number]);
-      const x = d3.scaleLinear().domain(d3.extent(points, (p) => p[0]) as [number, number]).range([0, 100]);
-      const y = d3.scaleLinear().domain(d3.extent(points, (p) => p[1]) as [number, number]).range([28, 2]);
-      const line = d3.line<[number, number]>().x((p) => x(p[0])).y((p) => y(p[1]));
-      const area = d3.area<[number, number]>().x((p) => x(p[0])).y0(30).y1((p) => y(p[1]));
+      const x = d3
+        .scaleLinear()
+        .domain(d3.extent(points, (p) => p[0]) as [number, number])
+        .range([0, 100]);
+      const y = d3
+        .scaleLinear()
+        .domain(d3.extent(points, (p) => p[1]) as [number, number])
+        .range([28, 2]);
+      const line = d3
+        .line<[number, number]>()
+        .x((p) => x(p[0]))
+        .y((p) => y(p[1]));
+      const area = d3
+        .area<[number, number]>()
+        .x((p) => x(p[0]))
+        .y0(30)
+        .y1((p) => y(p[1]));
       svg
         .selectAll("path.area")
         .data([points])
@@ -67,7 +94,10 @@ export const kpiChart: ChartFactory = (el, spec) => {
         delta.dataset.trend = change >= 0 ? "up" : "down";
       }
     },
-    setTheme() {},
+    setTheme(next) {
+      theme = next;
+      value.style.color = valueColor(theme, current, spec.thresholds, "");
+    },
     destroy: () => el.replaceChildren(),
   };
 };

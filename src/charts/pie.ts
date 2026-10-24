@@ -1,6 +1,16 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { bindTooltip, createFrame, createLegend, createTooltip, motionMs, need, rollup, seriesColor, topN } from "./util";
+import {
+  bindTooltip,
+  createFrame,
+  createLegend,
+  createTooltip,
+  motionMs,
+  need,
+  rollup,
+  seriesColor,
+  topN,
+} from "./util";
 
 type Slice = d3.PieArcDatum<[string, number]>;
 
@@ -22,7 +32,7 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
   const tooltip = createTooltip(el);
   let previous = new Map<string, Slice>();
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     const r = Math.max(0, Math.min(w, h) / 2);
     g.attr("transform", `translate(${frame.margin.left + w / 2},${frame.margin.top + h / 2})`);
@@ -37,7 +47,10 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
       .outerRadius(r)
       .padAngle(0.01)
       .cornerRadius(Math.min(2, theme.radius));
-    const color = seriesColor(theme, entries.map((e) => e[0]));
+    const color = seriesColor(
+      theme,
+      entries.map((e) => e[0]),
+    );
 
     // Slices tween from their previous angles, so live updates do not jump.
     const prev = previous;
@@ -47,13 +60,20 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
       .attr("fill", (s) => color(s.data[0]))
       .attr("stroke", "var(--d3s-surface)")
       .attr("stroke-width", 1)
-      .call((sel) => bindTooltip(sel, tooltip, (s) => [s.data[0], `${fmt(s.data[1])} (${pct(total ? s.data[1] / total : 0)})`]))
-      .transition()
-      .duration(animate ? motionMs(theme) : 0)
-      .attrTween("d", function (s) {
-        const start = prev.get(s.data[0]) ?? { ...s, startAngle: s.endAngle };
-        const i = d3.interpolate(start, s);
-        return (t) => arc(i(t)) ?? "";
+      .call((sel) =>
+        bindTooltip(sel, tooltip, (s) => [s.data[0], `${fmt(s.data[1])} (${pct(total ? s.data[1] / total : 0)})`]),
+      )
+      .call((sel) => {
+        const ms = animated ? motionMs(theme) : 0;
+        if (ms <= 0) return void sel.interrupt().attr("d", (s) => arc(s));
+        sel
+          .transition()
+          .duration(ms)
+          .attrTween("d", function (s) {
+            const start = prev.get(s.data[0]) ?? { ...s, startAngle: s.endAngle };
+            const i = d3.interpolate(start, s);
+            return (t) => arc(i(t)) ?? "";
+          });
       });
     previous = new Map(slices.map((s) => [s.data[0], s]));
 
@@ -66,7 +86,10 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
 
   return {
     update(rows) {
-      entries = topN(rollup(rows, (r) => String(r[xField]), yField, spec.aggregate ?? "sum"), spec.limit);
+      entries = topN(
+        rollup(rows, (r) => String(r[xField]), yField, spec.aggregate ?? "sum"),
+        spec.limit,
+      );
       draw();
     },
     setTheme(next) {

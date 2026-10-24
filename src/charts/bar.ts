@@ -14,6 +14,7 @@ import {
   renderAxes,
   seriesColor,
   topN,
+  animate,
 } from "./util";
 
 interface Bar {
@@ -38,13 +39,30 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
   // Keep the largest categories when `limit` is set. The others become "Other".
   let catOf = (r: Row) => String(r[xField]);
   if (spec.limit) {
-    const totals = d3.rollups(rows, (v) => aggregate(v.map((r) => Number(r[yField])), how), catOf);
+    const totals = d3.rollups(
+      rows,
+      (v) =>
+        aggregate(
+          v.map((r) => Number(r[yField])),
+          how,
+        ),
+      catOf,
+    );
     const kept = new Set(topN(totals, spec.limit).map(([k]) => k));
     const base = catOf;
     catOf = (r) => (kept.has(base(r)) ? base(r) : "Other");
   }
 
-  const nested = d3.rollups(rows, (v) => aggregate(v.map((r) => Number(r[yField])), how), catOf, seriesOf);
+  const nested = d3.rollups(
+    rows,
+    (v) =>
+      aggregate(
+        v.map((r) => Number(r[yField])),
+        how,
+      ),
+    catOf,
+    seriesOf,
+  );
   const categories = nested.map(([c]) => c);
   const seriesKeys = [...new Set(nested.flatMap(([, inner]) => inner.map(([s]) => s)))];
   if (spec.limit) {
@@ -60,7 +78,13 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
     });
     const stack = d3.stack<Record<string, number>>().keys(seriesKeys).offset(d3.stackOffsetDiverging)(wide);
     bars = stack.flatMap((layer) =>
-      layer.map((p, i) => ({ category: categories[i]!, series: layer.key, value: p.data[layer.key] ?? 0, v0: p[0], v1: p[1] })),
+      layer.map((p, i) => ({
+        category: categories[i]!,
+        series: layer.key,
+        value: p.data[layer.key] ?? 0,
+        v0: p[0],
+        v1: p[1],
+      })),
     );
   } else {
     bars = nested.flatMap(([category, inner]) =>
@@ -87,7 +111,7 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
   const legend = createLegend(el);
   const tooltip = createTooltip(el);
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     const { categories, seriesKeys, bars } = data;
     const band = d3
@@ -109,7 +133,7 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
       .nice()
       .range(horizontal ? [0, w] : [h, 0]);
     const color = seriesColor(theme, seriesKeys);
-    const ms = animate ? motionMs(theme) : 0;
+    const ms = animated ? motionMs(theme) : 0;
 
     if (horizontal) renderAxes(layers, value as never, band as never, { w, h, fmt, valueAxis: "x" });
     else renderAxes(layers, band as never, value as never, { w, h, fmt });
@@ -121,10 +145,14 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
       horizontal
         ? { x: value(b.v0), y: offset(b), width: Math.abs(value(b.v1) - value(b.v0)), height: sub.bandwidth() }
         : { x: offset(b), y: value(b.v1), width: sub.bandwidth(), height: Math.abs(value(b.v0) - value(b.v1)) };
-    const flat = (b: Bar) =>
-      horizontal ? { ...rect(b), x: zero, width: 0 } : { ...rect(b), y: zero, height: 0 };
+    const flat = (b: Bar) => (horizontal ? { ...rect(b), x: zero, width: 0 } : { ...rect(b), y: zero, height: 0 });
     // Works for a selection or a transition: both have the same `attr` calls.
-    const apply = (sel: d3.Selection<SVGRectElement, Bar, SVGGElement, unknown> | d3.Transition<SVGRectElement, Bar, SVGGElement, unknown>, geo: (b: Bar) => ReturnType<typeof rect>) =>
+    const apply = (
+      sel:
+        | d3.Selection<SVGRectElement, Bar, SVGGElement, unknown>
+        | d3.Transition<SVGRectElement, Bar, SVGGElement, unknown>,
+      geo: (b: Bar) => ReturnType<typeof rect>,
+    ) =>
       (sel as d3.Selection<SVGRectElement, Bar, SVGGElement, unknown>)
         .attr("x", (b) => geo(b).x)
         .attr("y", (b) => geo(b).y)
@@ -137,12 +165,12 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
       .join(
         (enter) => apply(enter.append("rect"), flat),
         (update) => update,
-        (exit) => apply(exit.transition().duration(ms) as never, flat).remove(),
+        (exit) => apply(animate(exit, ms) as never, flat).remove(),
       )
       .attr("rx", Math.min(3, theme.radius))
       .attr("fill", (b) => color(b.series))
       .call((s) => bindTooltip(s, tooltip, (b) => [b.category, `${b.series}: ${fmt(b.value)}`]))
-      .call((s) => apply(s.transition().duration(ms) as never, rect));
+      .call((s) => apply(animate(s, ms) as never, rect));
 
     legend.update(seriesKeys, color);
   }

@@ -12,6 +12,7 @@ import {
   need,
   renderAxes,
   seriesColor,
+  animate,
 } from "./util";
 
 interface Dot {
@@ -57,13 +58,21 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
       .filter((d) => !Number.isNaN(+d.x) && !Number.isNaN(d.y));
   }
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     const isTime = dots[0]?.x instanceof Date;
     const xExt = (d3.extent(dots, (d) => +d.x) as [number, number]) ?? [0, 1];
     const x = isTime
-      ? d3.scaleTime().domain(xExt.map((v) => new Date(v ?? 0)) as [Date, Date]).range([0, w]).nice()
-      : d3.scaleLinear().domain(xExt[0] === undefined ? [0, 1] : xExt).range([0, w]).nice();
+      ? d3
+          .scaleTime()
+          .domain(xExt.map((v) => new Date(v ?? 0)) as [Date, Date])
+          .range([0, w])
+          .nice()
+      : d3
+          .scaleLinear()
+          .domain(xExt[0] === undefined ? [0, 1] : xExt)
+          .range([0, w])
+          .nice();
     const y = d3
       .scaleLinear()
       .domain(d3.extent(dots, (d) => d.y).map((v) => v ?? 0) as [number, number])
@@ -94,11 +103,12 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
           ...(spec.size ? [`${spec.size}: ${fmt(d.size)}`] : []),
         ]),
       )
-      .transition()
-      .duration(animate ? motionMs(theme) : 0)
-      .attr("cx", (d) => x(d.x as never))
-      .attr("cy", (d) => y(d.y))
-      .attr("r", (d) => r(d.size));
+      .call((s) =>
+        animate(s, animated ? motionMs(theme) : 0)
+          .attr("cx", (d) => x(d.x as never))
+          .attr("cy", (d) => y(d.y))
+          .attr("r", (d) => r(d.size)),
+      );
 
     legend.update(keys, color);
   }

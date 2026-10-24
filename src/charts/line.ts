@@ -1,7 +1,18 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { formatX, toSeriesData, xHover, xScale, type SeriesData, type XValue } from "./xy";
-import { createFrame, createLegend, createTooltip, createXYLayers, motionMs, need, renderAxes, seriesColor } from "./util";
+import {
+  createFrame,
+  createLegend,
+  createTooltip,
+  createXYLayers,
+  motionMs,
+  need,
+  renderAxes,
+  renderMarkers,
+  seriesColor,
+  animate,
+} from "./util";
 
 type Point = [XValue, number];
 
@@ -26,12 +37,15 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
       if (hx === undefined) return tooltip.hide();
       hover.moveRule(x(hx as never));
       const vals = data.table.get(+hx)!;
-      tooltip.show(event, [formatX(hx), ...data.keys.filter((k) => vals.has(k)).map((k) => `${k}: ${fmt(vals.get(k)!)}`)]);
+      tooltip.show(event, [
+        formatX(hx),
+        ...data.keys.filter((k) => vals.has(k)).map((k) => `${k}: ${fmt(vals.get(k)!)}`),
+      ]);
     },
   );
   const linesG = layers.plot.append("g");
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     x = xScale(data, w);
     const all = [...data.table.values()].flatMap((m) => [...m.values()]);
@@ -49,7 +63,13 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
       .x((p) => x(p[0] as never))
       .y((p) => y(p[1]))
       .curve(d3.curveMonotoneX);
-    const series = data.keys.map((k) => [k, data.xs.filter((xv) => data.table.get(+xv)!.has(k)).map((xv) => [xv, data.table.get(+xv)!.get(k)!] as Point)] as const);
+    const series = data.keys.map(
+      (k) =>
+        [
+          k,
+          data.xs.filter((xv) => data.table.get(+xv)!.has(k)).map((xv) => [xv, data.table.get(+xv)!.get(k)!] as Point),
+        ] as const,
+    );
 
     linesG
       .selectAll<SVGPathElement, (typeof series)[number]>("path")
@@ -58,10 +78,9 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
       .attr("fill", "none")
       .attr("stroke-width", 2)
       .attr("stroke", ([k]) => color(k))
-      .transition()
-      .duration(animate ? motionMs(theme) : 0)
-      .attr("d", ([, pts]) => line(pts as Point[]));
+      .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", ([, pts]) => line(pts as Point[])));
 
+    renderMarkers(layers.plot, y, w, theme, spec.thresholds, fmt);
     legend.update(data.keys, color);
   }
 

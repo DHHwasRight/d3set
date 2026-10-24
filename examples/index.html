@@ -5,10 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>d3set demo</title>
     <style>
-      body { margin: 0; padding: 24px; font-family: system-ui, sans-serif; }
-      body.dark { background: #111114; color: #ececf1; }
-      header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-      h2 { font-size: 16px; margin: 32px 0 8px; }
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: system-ui, sans-serif;
+      }
+      body.dark {
+        background: #111114;
+        color: #ececf1;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 32px 0 8px;
+      }
     </style>
   </head>
   <body>
@@ -16,7 +31,9 @@
       <h1 style="margin: 0; font-size: 20px">d3set</h1>
       <button id="theme">Toggle theme</button>
     </header>
-    <h2>Client-side filters</h2>
+    <h2>Observability (Datadog-style views)</h2>
+    <div id="ops"></div>
+    <h2>Business (client-side filters)</h2>
     <div id="client"></div>
     <h2>Server-side filters</h2>
     <div id="server"></div>

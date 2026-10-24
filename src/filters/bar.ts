@@ -63,7 +63,10 @@ export function renderFilterBar(
       case "dateRange": {
         const isDate = def.type === "dateRange";
         const [a, b] = [document.createElement("input"), document.createElement("input")];
-        for (const [input, ph] of [[a, isDate ? "From" : "Min"], [b, isDate ? "To" : "Max"]] as const) {
+        for (const [input, ph] of [
+          [a, isDate ? "From" : "Min"],
+          [b, isDate ? "To" : "Max"],
+        ] as const) {
           input.type = isDate ? "date" : "number";
           input.placeholder = ph;
           input.setAttribute("aria-label", `${def.label} ${ph.toLowerCase()}`);

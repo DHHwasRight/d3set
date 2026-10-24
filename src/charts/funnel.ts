@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { bindTooltip, createFrame, createTooltip, motionMs, need, rollup, seriesColor, textOn } from "./util";
+import { bindTooltip, createFrame, createTooltip, motionMs, need, rollup, seriesColor, textOn, animate } from "./util";
 
 interface Stage {
   name: string;
@@ -27,25 +27,42 @@ export const funnelChart: ChartFactory = (el, spec, ctx) => {
   const g = frame.svg.append("g");
   const tooltip = createTooltip(el);
 
-  function draw(animate = true) {
+  function draw(animated = true) {
     const { w, h } = frame.inner();
     g.attr("transform", `translate(${frame.margin.left},${frame.margin.top})`);
-    const band = d3.scaleBand().domain(stages.map((s) => s.name)).range([0, h]).padding(0.12);
-    const width = d3.scaleLinear().domain([0, d3.max(stages, (s) => s.value) || 1]).range([0, w]);
-    const color = seriesColor(theme, stages.map((s) => s.name));
-    const ms = animate ? motionMs(theme) : 0;
+    const band = d3
+      .scaleBand()
+      .domain(stages.map((s) => s.name))
+      .range([0, h])
+      .padding(0.12);
+    const width = d3
+      .scaleLinear()
+      .domain([0, d3.max(stages, (s) => s.value) || 1])
+      .range([0, w]);
+    const color = seriesColor(
+      theme,
+      stages.map((s) => s.name),
+    );
+    const ms = animated ? motionMs(theme) : 0;
 
     const row = g
       .selectAll<SVGGElement, Stage>("g.d3s-stage")
       .data(stages, (s) => s.name)
       .join((enter) => {
         const e = enter.append("g").attr("class", "d3s-stage");
-        e.append("rect").attr("x", w / 2).attr("width", 0);
+        e.append("rect")
+          .attr("x", w / 2)
+          .attr("width", 0);
         e.append("text").attr("class", "d3s-label").attr("text-anchor", "middle").attr("dy", "0.35em");
         return e;
       })
       .call((s) =>
-        bindTooltip(s, tooltip, (st) => [st.name, fmt(st.value), `${pct(st.ofFirst)} of first`, `${pct(st.ofPrev)} of previous`]),
+        bindTooltip(s, tooltip, (st) => [
+          st.name,
+          fmt(st.value),
+          `${pct(st.ofFirst)} of first`,
+          `${pct(st.ofPrev)} of previous`,
+        ]),
       );
     row.attr("transform", (s) => `translate(0,${band(s.name) ?? 0})`);
     row
@@ -53,10 +70,11 @@ export const funnelChart: ChartFactory = (el, spec, ctx) => {
       .attr("height", band.bandwidth())
       .attr("rx", Math.min(4, theme.radius))
       .attr("fill", (s) => color(s.name))
-      .transition()
-      .duration(ms)
-      .attr("x", (s) => (w - width(s.value)) / 2)
-      .attr("width", (s) => width(s.value));
+      .call((s) =>
+        animate(s, ms)
+          .attr("x", (s) => (w - width(s.value)) / 2)
+          .attr("width", (s) => width(s.value)),
+      );
     row
       .select("text")
       .attr("x", w / 2)

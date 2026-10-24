@@ -91,7 +91,9 @@ function matches(def: FilterDef, value: FilterValue, row: Row): boolean {
       return wanted.includes(String(cell));
     }
     case "search":
-      return String(cell ?? "").toLowerCase().includes(String(value).toLowerCase());
+      return String(cell ?? "")
+        .toLowerCase()
+        .includes(String(value).toLowerCase());
     case "range": {
       const { min, max } = value as { min?: number; max?: number };
       const n = Number(cell);
