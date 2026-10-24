@@ -82,6 +82,46 @@ A chart gets `ctx.interactions` (or nothing when mounted alone):
 `toggle(field, value, additive)`, `selection(field)`, `setRange(field, range)`, `hoverTime(t)`, `onHoverTime(fn)`.
 The helpers `bindSelect`, `dimOpacity`, `rangeBrush`, and `createLegend` are in `src/charts/util.ts`.
 
+## Server rendering (Rust) and hydration
+
+`rust/d3set-ssr` renders every chart type on the server, with [rsx](https://github.com/DHHwasRight/rsx) templates:
+the same scales, ticks, number formats, colors, and markup as the browser library. A page is complete without
+JavaScript. `hydrate()` then turns it into live charts in place.
+
+```rust
+use d3set_ssr::{figure, static_figure, Agg, Dashboard, Filter, Spec, Stream, LIGHT};
+
+let spec = Spec::new("timeseries").x("at").y("latency").series("service").aggregate(Agg::Avg);
+let html = static_figure(&spec, &rows, &LIGHT, 718.0)?;                                  // markup only
+let html = figure(&spec, &rows, &LIGHT, 718.0, Some(&Stream::new("/events/ops").key("id")))?; // + payload, live
+let html = Dashboard { charts: vec![spec], filters: vec![Filter::select("service")], ..Default::default() }.render(&rows)?;
+```
+
+```ts
+import { hydrate } from "d3set";
+hydrate(document); // every [data-d3s-dashboard] and [data-d3s-chart] with a payload
+```
+
+- The payload (written with [jt](https://github.com/DHHwasRight/jt)) carries the spec, the rows, the full theme, and an optional stream.
+- The first browser draw has no transition and happens in the same task as the swap, so nothing flashes or moves.
+- With `Stream`, rows follow server-sent events; `key("id")` upserts rows, so a replayed catch-up does not count twice.
+- Time labels are UTC on both sides.
+- `test/ssr-parity.test.ts` renders each case with both renderers and compares axes, legends, marks, and text
+  (130 cases). Build the renderer first: `mise exec -- cargo build -p d3set-ssr --example render`.
+  To port or change a chart, see `rust/d3set-ssr/PORTING.md`.
+
+### Gallery
+
+`rust/gallery` is a [brocanth](../brocanth) app: every chart type, server-rendered and hydrated, two live dashboards,
+and sample feeds typed in Rust and written as JSON by jt (`/data/ops`, `/data/sales`, `/events/{feed}`).
+
+```sh
+mise run gallery   # builds the browser bundle into rust/gallery/assets, then serves http://127.0.0.1:3000
+```
+
+Append `?js=off` to any page to see what the server sends. Rust 1.98 is pinned in `mise.toml`: rsx proc macros
+do not load across compiler versions.
+
 ## Server-sent events protocol
 
 Each event `data` is JSON:
@@ -211,3 +251,5 @@ registerChart("table", (el, spec, { theme }) => ({
 | `npm test` | Vitest + jsdom |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run format` | Prettier |
+| `npm run build:browser` | `dist-browser/d3set.js`: one ES module with d3 included, for pages without a bundler |
+| `mise run gallery` | Build the browser bundle and serve the Rust gallery |

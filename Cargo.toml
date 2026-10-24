@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["rust/d3set-ssr"]
+members = ["rust/d3set-ssr", "rust/gallery"]
 
 [workspace.package]
 version = "0.1.0"

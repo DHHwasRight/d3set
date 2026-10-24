@@ -1,0 +1,17 @@
+[package]
+name = "gallery"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "The d3set chart gallery: every chart rendered on the server with rsx, hydrated in the browser, live over SSE."
+publish = false
+
+[dependencies]
+d3set-ssr.workspace = true
+rsx.workspace = true
+jt.workspace = true
+brocanth = { path = "../../../brocanth/crates/brocanth" }
+brocanth-pages = { path = "../../../brocanth/crates/brocanth-pages" }
+brocanth-assets = { path = "../../../brocanth/crates/brocanth-assets" }
+brocanth-server = { path = "../../../brocanth/crates/brocanth-server" }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "macros"] }
