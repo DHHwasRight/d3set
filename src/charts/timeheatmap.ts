@@ -42,7 +42,7 @@ export const timeheatmapChart: ChartFactory = (el, spec, ctx) => {
   const layers = createXYLayers(frame);
   const tooltip = createTooltip(el);
   const cellsG = layers.plot.append("g");
-  let x = d3.scaleTime();
+  let x = d3.scaleUtc();
   let y = d3.scaleLinear();
   // Drag to zoom the dashboard to a time range; double-click to reset. Hover goes through the brush layer.
   const brush = rangeBrush(layers.plot, { mode: "x", x: () => x, xField, interactions: interactionsOf(ctx) });
@@ -53,7 +53,7 @@ export const timeheatmapChart: ChartFactory = (el, spec, ctx) => {
       const v = y.invert(py);
       const c = cells.find((c) => t >= c.t && t < c.t + step && v >= c.lo && v < c.hi);
       if (!c) return tooltip.hide();
-      tooltip.show(event, [d3.timeFormat("%H:%M:%S")(new Date(c.t)), `${fmt(c.lo)} – ${fmt(c.hi)}`, `${c.count} rows`]);
+      tooltip.show(event, [d3.utcFormat("%H:%M:%S")(new Date(c.t)), `${fmt(c.lo)} – ${fmt(c.hi)}`, `${c.count} rows`]);
     })
     .on("pointerleave.d3s", () => tooltip.hide());
 
@@ -61,7 +61,7 @@ export const timeheatmapChart: ChartFactory = (el, spec, ctx) => {
     const { w, h } = frame.inner();
     const tExt = d3.extent(cells, (c) => c.t) as [number, number] | [undefined, undefined];
     x = d3
-      .scaleTime()
+      .scaleUtc()
       .domain(tExt[0] === undefined ? [new Date(0), new Date(step)] : [new Date(tExt[0]), new Date(tExt[1]! + step)])
       .range([0, w]);
     y = d3.scaleLinear().domain(yDomain).range([h, 0]);

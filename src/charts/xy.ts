@@ -87,14 +87,14 @@ export function xScale(data: SeriesData, w: number) {
   const domain: [number, number] = ext[0] === undefined ? [0, 1] : [ext[0], ext[1]! + (data.step ?? 0)];
   return data.isTime
     ? d3
-        .scaleTime()
+        .scaleUtc()
         .domain(domain.map((v) => new Date(v)) as [Date, Date])
         .range([0, w])
     : d3.scaleLinear().domain(domain).range([0, w]);
 }
 
 export function formatX(x: XValue): string {
-  return x instanceof Date ? d3.timeFormat("%Y-%m-%d %H:%M")(x) : String(x);
+  return x instanceof Date ? d3.utcFormat("%Y-%m-%d %H:%M")(x) : String(x);
 }
 
 export interface XInteractOptions {

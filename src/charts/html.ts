@@ -20,5 +20,5 @@ export function htmlBody(el: HTMLElement, height: number, className: string): HT
   return body;
 }
 
-export const timeFormat = (d: Date) =>
-  d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+/** HH:MM:SS in UTC, like every time label in d3set, so server and browser renders match. */
+export const timeFormat = (d: Date) => d.toISOString().slice(11, 19);

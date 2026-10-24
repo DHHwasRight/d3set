@@ -76,7 +76,7 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
     const xExt = (d3.extent(dots, (d) => +d.x) as [number, number]) ?? [0, 1];
     x = isTime
       ? d3
-          .scaleTime()
+          .scaleUtc()
           .domain(xExt.map((v) => new Date(v ?? 0)) as [Date, Date])
           .range([0, w])
           .nice()
@@ -116,7 +116,7 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
       .call((s) =>
         bindTooltip(s, tooltip, (d) => [
           d.series,
-          `${xField}: ${d.x instanceof Date ? d3.timeFormat("%Y-%m-%d %H:%M")(d.x) : fmt(d.x)}`,
+          `${xField}: ${d.x instanceof Date ? d3.utcFormat("%Y-%m-%d %H:%M")(d.x) : fmt(d.x)}`,
           `${yField}: ${fmt(d.y)}`,
           ...(spec.size ? [`${spec.size}: ${fmt(d.size)}`] : []),
         ]),
