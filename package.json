@@ -26,7 +26,9 @@
     "build": "vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "format": "prettier --write src test examples"
+    "format": "prettier --write src test examples",
+    "build:browser": "vite build -c vite.browser.config.ts",
+    "gallery:assets": "npm run build:browser && mkdir -p rust/gallery/assets/js rust/gallery/assets/css && cp dist-browser/d3set.js rust/gallery/assets/js/d3set.js && cp dist-browser/d3set.css rust/gallery/assets/css/d3set.css"
   },
   "dependencies": {
     "d3": "^7.9.0"

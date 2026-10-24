@@ -16,6 +16,8 @@ export interface SseSourceOptions extends Partial<MergeOptions> {
   throttleMs?: number;
   /** For tests and non-browser hosts. */
   EventSource?: typeof EventSource;
+  /** Rows to start from, for example rows a server rendered into the page. The stream then updates them. */
+  initial?: Row[];
 }
 
 export function buildUrl(url: string, params: Record<string, string | string[]> = {}): string {
@@ -36,6 +38,7 @@ export function sseSource(opts: SseSourceOptions): DataSource {
   if (!ES) throw new Error("d3set: sseSource: no EventSource implementation is available.");
 
   const store = new SourceStore();
+  if (opts.initial) store.setRows(opts.initial);
   const merge: MergeOptions = { mode: opts.mode ?? "append", key: opts.key, maxRows: opts.maxRows };
   const parse = opts.parse ?? ((d: string) => JSON.parse(d));
   const events = opts.events ?? ["message"];

@@ -38,6 +38,11 @@ export interface DashboardOptions {
   timeWindows?: string[];
   /** Initial time window. Default: `all`. */
   timeWindow?: string;
+  /**
+   * Replace server-rendered markup in `root` (see `hydrate`). The first draw has no transition,
+   * so the swap from server markup to live charts does not animate.
+   */
+  hydrate?: boolean;
 }
 
 export interface Dashboard {
@@ -70,7 +75,7 @@ function describe(v: FilterValue): string {
   if (Array.isArray(v)) return v.join(", ");
   if (typeof v === "string") return v;
   if (v && "from" in v) {
-    const f = (s?: string) => (s ? (s.length > 10 ? d3.timeFormat("%H:%M:%S")(new Date(s)) : s) : "…");
+    const f = (s?: string) => (s ? (s.length > 10 ? d3.utcFormat("%H:%M:%S")(new Date(s)) : s) : "…");
     return `${f(v.from)} – ${f(v.to)}`;
   }
   if (v && ("min" in v || "max" in v)) {
@@ -103,6 +108,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
   let frozen: Row[] | undefined;
   let pausedAt = 0;
 
+  if (opts.hydrate) root.replaceChildren();
   root.classList.add("d3s-root");
   applyTheme(root, theme);
 
@@ -227,7 +233,8 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
     const body = el("div");
     card.append(body);
     grid.append(card);
-    return getChart(spec.type)(body, spec, { theme, interactions: interactionsFor(chartIds[i]!) });
+    const first = opts.hydrate ? { ...theme, motion: 0 } : theme;
+    return getChart(spec.type)(body, spec, { theme: first, interactions: interactionsFor(chartIds[i]!) });
   });
 
   function renderChips() {
@@ -290,6 +297,8 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
       render();
     }),
   );
+  // Hydration drew without motion; later updates animate.
+  if (opts.hydrate) for (const c of charts) c.setTheme(theme);
 
   const pushParams = () => {
     if (mode === "server") opts.source.setParams(filtersToParams(allDefs(), store.get()));

@@ -2,3 +2,8 @@ node_modules
 dist
 *.log
 .DS_Store
+target
+dist-browser
+# Built by `npm run gallery:assets`.
+rust/gallery/assets/js/d3set.js
+rust/gallery/assets/css/d3set.css

@@ -1,6 +1,7 @@
 import "./style.css";
 
 export { createDashboard, type Dashboard, type DashboardOptions } from "./dashboard";
+export { hydrate, type ChartPayload, type DashboardPayload, type HydrateOptions, type Hydrated } from "./hydrate";
 
 export { applyTheme, createTheme, darkTheme, lightTheme, themeToCssVars, type Theme } from "./theme/theme";
 
