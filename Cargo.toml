@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["rust/d3set-ssr"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.97"
+license = "MIT"
+
+[workspace.dependencies]
+d3set-ssr = { path = "rust/d3set-ssr" }
+# Git, like brocanth's own pages and assets crates: two copies of rsx would be two `Template` traits.
+rsx = { git = "https://github.com/DHHwasRight/rsx.git", branch = "main" }
+jt = { git = "https://github.com/DHHwasRight/jt.git", branch = "main" }
