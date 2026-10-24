@@ -2,17 +2,19 @@ import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { autoInterval } from "./xy";
 import {
+  animate,
   asDate,
   bucket,
   createFrame,
   createTooltip,
   createXYLayers,
+  interactionsOf,
   motionMs,
   need,
   parseInterval,
+  rangeBrush,
   renderAxes,
   sequentialColor,
-  animate,
 } from "./util";
 
 interface Cell {
@@ -39,20 +41,36 @@ export const timeheatmapChart: ChartFactory = (el, spec, ctx) => {
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));
   const layers = createXYLayers(frame);
   const tooltip = createTooltip(el);
+  const cellsG = layers.plot.append("g");
+  let x = d3.scaleTime();
+  let y = d3.scaleLinear();
+  // Drag to zoom the dashboard to a time range; double-click to reset. Hover goes through the brush layer.
+  const brush = rangeBrush(layers.plot, { mode: "x", x: () => x, xField, interactions: interactionsOf(ctx) });
+  brush.g
+    .on("pointermove.d3s", (event: PointerEvent) => {
+      const [px, py] = d3.pointer(event);
+      const t = +x.invert(px);
+      const v = y.invert(py);
+      const c = cells.find((c) => t >= c.t && t < c.t + step && v >= c.lo && v < c.hi);
+      if (!c) return tooltip.hide();
+      tooltip.show(event, [d3.timeFormat("%H:%M:%S")(new Date(c.t)), `${fmt(c.lo)} – ${fmt(c.hi)}`, `${c.count} rows`]);
+    })
+    .on("pointerleave.d3s", () => tooltip.hide());
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
     const tExt = d3.extent(cells, (c) => c.t) as [number, number] | [undefined, undefined];
-    const x = d3
+    x = d3
       .scaleTime()
       .domain(tExt[0] === undefined ? [new Date(0), new Date(step)] : [new Date(tExt[0]), new Date(tExt[1]! + step)])
       .range([0, w]);
-    const y = d3.scaleLinear().domain(yDomain).range([h, 0]);
+    y = d3.scaleLinear().domain(yDomain).range([h, 0]);
     const color = sequentialColor(theme, [0, d3.max(cells, (c) => c.count) ?? 1]);
     renderAxes(layers, x as never, y as never, { w, h, fmt });
     layers.grid.selectAll("*").remove();
 
-    layers.plot
+    brush.resize(w, h);
+    cellsG
       .selectAll<SVGRectElement, Cell>("rect")
       .data(cells, (c) => `${c.t}\u0000${c.lo}`)
       .join("rect")
@@ -60,14 +78,6 @@ export const timeheatmapChart: ChartFactory = (el, spec, ctx) => {
       .attr("width", (c) => Math.max(1, x(new Date(c.t + step)) - x(new Date(c.t)) - 1))
       .attr("y", (c) => y(c.hi))
       .attr("height", (c) => Math.max(1, y(c.lo) - y(c.hi) - 1))
-      .on("pointermove", (event: PointerEvent, c) =>
-        tooltip.show(event, [
-          d3.timeFormat("%H:%M:%S")(new Date(c.t)),
-          `${fmt(c.lo)} – ${fmt(c.hi)}`,
-          `${c.count} rows`,
-        ]),
-      )
-      .on("pointerleave", () => tooltip.hide())
       .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("fill", (c) => color(c.count)));
   }
 

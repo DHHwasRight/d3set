@@ -44,6 +44,44 @@ dashboard.setTheme(brandDark);
 Host CSS can override any token: `.my-app .d3s-root { --d3s-radius: 0; }`.
 Charts respect `prefers-reduced-motion`.
 
+## Interactions
+
+Charts in a dashboard work together, like in Datadog, Grafana, or Superset.
+
+| Gesture | Where | Effect |
+| --- | --- | --- |
+| Click a mark | bar, pie, donut, treemap, sunburst, funnel, heatmap column, box plot, scatter dot, top list, host map, status tile, change row, stream line, table | Cross-filter: the other charts show only that value. The clicked chart keeps all its data and dims the rest. |
+| Shift-click (or Ctrl/Cmd) | same | Add or remove a value from the selection |
+| Click the selected value again | same | Clear the selection |
+| Drag | line, area, timeseries, time heatmap, histogram | Range filter on the x field for every chart (zoom) |
+| Drag on empty space | scatter | Range filter on x and y |
+| Double-click | same charts | Clear that range |
+| Hover | time charts | Tooltip, and a rule at the same time on the other time charts |
+| Click a legend item | charts with a legend | Show only that series; click again to show all |
+| Shift-click a legend item | same | Hide or show that series |
+
+Every active filter shows as a chip under the header, with × to remove it and "Clear all".
+A chart click on a field with a declared `select` filter updates that filter and its control.
+Other fields get an automatic filter that shows only as a chip.
+
+### Time window and pause
+
+```ts
+createDashboard(el, { source, charts, timeField: "at", timeWindow: "15m" });
+```
+
+`timeField` adds a window picker (`5m 15m 1h 6h 1d All`, change it with `timeWindows`) and a Pause button.
+Pause freezes the data; filters still work on the frozen rows. Choosing a window clears a brush range on the time field.
+
+From code: `dashboard.setTimeWindow("1h")`, `dashboard.setPaused(true)`, `dashboard.clearFilters()`,
+`dashboard.filters.set("region", ["EU"])`.
+
+### In custom charts
+
+A chart gets `ctx.interactions` (or nothing when mounted alone):
+`toggle(field, value, additive)`, `selection(field)`, `setRange(field, range)`, `hoverTime(t)`, `onHoverTime(fn)`.
+The helpers `bindSelect`, `dimOpacity`, `rangeBrush`, and `createLegend` are in `src/charts/util.ts`.
+
 ## Server-sent events protocol
 
 Each event `data` is JSON:

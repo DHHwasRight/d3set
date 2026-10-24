@@ -1,16 +1,17 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { formatX, toSeriesData, xHover, xScale, type SeriesData, type XValue } from "./xy";
+import { formatX, toSeriesData, xInteract, xScale, type SeriesData, type XValue } from "./xy";
 import {
   createFrame,
   createLegend,
   createTooltip,
   createXYLayers,
+  interactionsOf,
   motionMs,
   need,
   renderAxes,
   renderMarkers,
-  seriesColor,
+  stableColors,
   animate,
 } from "./util";
 
@@ -22,6 +23,7 @@ interface Band {
 /** Filled areas over a time or numeric x axis. Stacked by default (`stacked: false` overlaps them). */
 export const areaChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const stacked = spec.stacked ?? true;
@@ -31,46 +33,48 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));
   const layers = createXYLayers(frame);
-  const legend = createLegend(el);
+  const legend = createLegend(el, () => draw(false));
   const tooltip = createTooltip(el);
   const areasG = layers.plot.append("g");
-  const hover = xHover(
-    layers.plot,
-    () => data.xs,
-    (px) => +x.invert(px),
-    (hx, event) => {
+  const pointer = xInteract(layers.plot, {
+    xs: () => data.xs,
+    x: () => x,
+    interactions: interactionsOf(ctx),
+    field: xField,
+    onHover(hx, event) {
       if (hx === undefined) return tooltip.hide();
-      hover.moveRule(x(hx as never));
       const vals = data.table.get(+hx)!;
-      const lines = data.keys.map((k) => `${k}: ${fmt(vals.get(k) ?? 0)}`);
-      if (stacked && data.keys.length > 1) lines.push(`Total: ${fmt(d3.sum(vals.values()))}`);
+      const keys = data.keys.filter(legend.visible);
+      const lines = keys.map((k) => `${k}: ${fmt(vals.get(k) ?? 0)}`);
+      if (stacked && keys.length > 1) lines.push(`Total: ${fmt(d3.sum(keys, (k) => vals.get(k) ?? 0))}`);
       tooltip.show(event, [formatX(hx), ...lines]);
     },
-  );
+  });
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
     x = xScale(data, w);
+    const keys = data.keys.filter(legend.visible);
     // Missing points count as 0 so stacks stay continuous.
     const wide = data.xs.map((xv) => {
       const vals = data.table.get(+xv)!;
-      return Object.fromEntries(data.keys.map((k) => [k, vals.get(k) ?? 0])) as Record<string, number>;
+      return Object.fromEntries(keys.map((k) => [k, vals.get(k) ?? 0])) as Record<string, number>;
     });
     const bands: Band[] = stacked
       ? d3
           .stack<Record<string, number>>()
-          .keys(data.keys)(wide)
+          .keys(keys)(wide)
           .map((s) => ({ key: s.key, points: s.map((p, i) => ({ x: data.xs[i]!, y0: p[0], y1: p[1] })) }))
-      : data.keys.map((k) => ({ key: k, points: wide.map((d, i) => ({ x: data.xs[i]!, y0: 0, y1: d[k] ?? 0 })) }));
+      : keys.map((k) => ({ key: k, points: wide.map((d, i) => ({ x: data.xs[i]!, y0: 0, y1: d[k] ?? 0 })) }));
     const top = d3.max(bands, (b) => d3.max(b.points, (p) => p.y1)) ?? 1;
     const y = d3
       .scaleLinear()
       .domain([0, top || 1])
       .nice()
       .range([h, 0]);
-    const color = seriesColor(theme, data.keys);
+    const color = colors(theme, data.keys);
     renderAxes(layers, x as never, y as never, { w, h, fmt });
-    hover.resize(w, h);
+    pointer.resize(w, h);
 
     const area = d3
       .area<Band["points"][number]>()
@@ -103,6 +107,7 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
       draw(false);
     },
     destroy() {
+      pointer.destroy();
       tooltip.destroy();
       legend.destroy();
       frame.destroy();

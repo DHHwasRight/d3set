@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { ChartFactory, ColumnSpec } from "./types";
-import { aggregate, matchThreshold, thresholdColor } from "./util";
+import { aggregate, interactionsOf, matchThreshold, selectOnClick, thresholdColor } from "./util";
 
 type Sort = { field: string; dir: "ascending" | "descending" } | undefined;
 
@@ -10,10 +10,12 @@ type Sort = { field: string; dir: "ascending" | "descending" } | undefined;
  * - Raw mode (default): one line per row. Pick fields with `columns`.
  * - Group mode (`x` and `aggregate` set): one line per `x` value (and `series` value), with the aggregate of `y`.
  * Column `thresholds` (or spec `thresholds` for the group metric) color numbers.
+ * Click a group line (or a text cell in raw mode) to cross-filter the dashboard.
  * `limit` caps the number of lines (default 100). Click a header to sort.
  */
 export const tableChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const ix = interactionsOf(ctx);
   el.classList.add("d3s-chart");
   el.style.height = `${spec.height ?? 240}px`;
   const wrap = document.createElement("div");
@@ -109,8 +111,15 @@ export const tableChart: ChartFactory = (el, spec, ctx) => {
               td.style.fontWeight = "600";
             }
           }
+          // Raw mode: click a text cell to filter the dashboard by that value.
+          if (!grouped && !isNumeric[i] && v !== undefined && v !== null) {
+            td.classList.add("d3s-cell-link");
+            selectOnClick(td, ix, c.field, String(v));
+          }
           tr.append(td);
         });
+        // Group mode: click a line to filter the dashboard by its group.
+        if (grouped) selectOnClick(tr, ix, spec.x, String(r[spec.x!]));
         return tr;
       }),
     );

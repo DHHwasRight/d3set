@@ -2,17 +2,18 @@ import * as d3 from "d3";
 import { areaChart } from "./area";
 import { lineChart } from "./line";
 import type { ChartFactory } from "./types";
-import { formatX, toSeriesData, xHover, xScale, type SeriesData } from "./xy";
+import { formatX, toSeriesData, xInteract, xScale, type SeriesData } from "./xy";
 import {
   createFrame,
   createLegend,
   createTooltip,
   createXYLayers,
+  interactionsOf,
   motionMs,
   need,
   renderAxes,
   renderMarkers,
-  seriesColor,
+  stableColors,
   animate,
 } from "./util";
 
@@ -27,6 +28,7 @@ interface TimeBar {
 /** Stacked bars per time bucket. Used by `timeseries` with `display: "bars"`. */
 const timeBarsChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
@@ -35,22 +37,25 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));
   const layers = createXYLayers(frame);
-  const legend = createLegend(el);
+  const legend = createLegend(el, () => draw(false));
   const tooltip = createTooltip(el);
   const barsG = layers.plot.append("g");
-  const hover = xHover(
-    layers.plot,
-    () => data.xs,
-    // Bars start at the bucket start: hover the bucket under the pointer.
-    (px) => +x.invert(px) - (data.step ?? 0) / 2,
-    (hx, event) => {
+  const pointer = xInteract(layers.plot, {
+    xs: () => data.xs,
+    x: () => x,
+    // Bars start at the bucket start: snap to the bucket under the pointer, rule at its middle.
+    offset: () => (data.step ?? 0) / 2,
+    interactions: interactionsOf(ctx),
+    field: xField,
+    onHover(hx, event) {
       if (hx === undefined) return tooltip.hide();
       const vals = data.table.get(+hx)!;
-      const lines = data.keys.filter((k) => vals.has(k)).map((k) => `${k}: ${fmt(vals.get(k)!)}`);
-      if (data.keys.length > 1) lines.push(`Total: ${fmt(d3.sum(vals.values()))}`);
+      const keys = data.keys.filter((k) => legend.visible(k) && vals.has(k));
+      const lines = keys.map((k) => `${k}: ${fmt(vals.get(k)!)}`);
+      if (keys.length > 1) lines.push(`Total: ${fmt(d3.sum(keys, (k) => vals.get(k)!))}`);
       tooltip.show(event, [formatX(hx), ...lines]);
     },
-  );
+  });
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
@@ -60,12 +65,13 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
     const step = data.step ?? d3.min(gaps) ?? 1;
     const bw = Math.max(1, x((+data.xs[0]! + step) as never) - x(data.xs[0] as never) - 1);
 
+    const keys = data.keys.filter(legend.visible);
     const wide = data.xs.map(
-      (xv) => Object.fromEntries(data.keys.map((k) => [k, data.table.get(+xv)!.get(k) ?? 0])) as Record<string, number>,
+      (xv) => Object.fromEntries(keys.map((k) => [k, data.table.get(+xv)!.get(k) ?? 0])) as Record<string, number>,
     );
     const bars: TimeBar[] = d3
       .stack<Record<string, number>>()
-      .keys(data.keys)
+      .keys(keys)
       .offset(d3.stackOffsetDiverging)(wide)
       .flatMap((layer) =>
         layer.map((p, i) => ({ key: layer.key, x: +data.xs[i]!, y0: p[0], y1: p[1], value: p.data[layer.key] ?? 0 })),
@@ -76,10 +82,10 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
       .domain([Math.min(0, d3.min(bars, (b) => b.y0) ?? 0), Math.max(0, d3.max(bars, (b) => b.y1) ?? 1) || 1])
       .nice()
       .range([h, 0]);
-    const color = seriesColor(theme, data.keys);
+    const color = colors(theme, data.keys);
     const ms = animated ? motionMs(theme) : 0;
     renderAxes(layers, x as never, y as never, { w, h, fmt });
-    hover.resize(w, h);
+    pointer.resize(w, h);
 
     barsG
       .selectAll<SVGRectElement, TimeBar>("rect")
@@ -114,6 +120,7 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
       draw(false);
     },
     destroy() {
+      pointer.destroy();
       tooltip.destroy();
       legend.destroy();
       frame.destroy();

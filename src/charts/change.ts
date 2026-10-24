@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { ChartFactory } from "./types";
 import { h, htmlBody } from "./html";
-import { aggregate, asDate, need, parseInterval } from "./util";
+import { aggregate, asDate, interactionsOf, need, parseInterval, selectOnClick } from "./util";
 
 interface Change {
   group: string;
@@ -25,6 +25,7 @@ export const changeChart: ChartFactory = (el, spec, ctx) => {
   const fmt = d3.format(spec.format ?? ".3~s");
   const pct = d3.format("+.1%");
   const body = htmlBody(el, spec.height ?? 240, "d3s-change");
+  const ix = interactionsOf(ctx);
   let changes: Change[] = [];
 
   function compute(rows: Row[]): Change[] {
@@ -82,6 +83,7 @@ export const changeChart: ChartFactory = (el, spec, ctx) => {
           delta,
         );
         row.title = `${c.group}: ${fmt(c.before)} → ${fmt(c.now)}`;
+        selectOnClick(row, ix, spec.series, c.group);
         return row;
       }),
     );

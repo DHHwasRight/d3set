@@ -1,14 +1,18 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import {
+  bindSelect,
   bindTooltip,
+  byName,
   createFrame,
   createLegend,
   createTooltip,
+  dimOpacity,
+  interactionsOf,
   motionMs,
   need,
   rollup,
-  seriesColor,
+  stableColors,
   topN,
 } from "./util";
 
@@ -20,6 +24,7 @@ type Slice = d3.PieArcDatum<[string, number]>;
  */
 export const pieChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
@@ -28,26 +33,28 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false), { top: 4, right: 4, bottom: 4, left: 4 });
   const g = frame.svg.append("g");
-  const legend = createLegend(el);
+  const legend = createLegend(el, () => draw(false));
   const tooltip = createTooltip(el);
+  const ix = interactionsOf(ctx);
   let previous = new Map<string, Slice>();
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
     const r = Math.max(0, Math.min(w, h) / 2);
     g.attr("transform", `translate(${frame.margin.left + w / 2},${frame.margin.top + h / 2})`);
-    const total = d3.sum(entries, (e) => e[1]);
+    const shown = entries.filter((e) => legend.visible(e[0]));
+    const total = d3.sum(shown, (e) => e[1]);
     const slices = d3
       .pie<[string, number]>()
       .sort(null)
-      .value((e) => Math.max(0, e[1]))(entries);
+      .value((e) => Math.max(0, e[1]))(shown);
     const arc = d3
       .arc<Slice>()
       .innerRadius(r * Math.min(0.9, Math.max(0, spec.innerRadius ?? 0)))
       .outerRadius(r)
       .padAngle(0.01)
       .cornerRadius(Math.min(2, theme.radius));
-    const color = seriesColor(
+    const color = colors(
       theme,
       entries.map((e) => e[0]),
     );
@@ -58,6 +65,8 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
       .data(slices, (s) => s.data[0])
       .join("path")
       .attr("fill", (s) => color(s.data[0]))
+      .attr("opacity", (s) => dimOpacity(ix, xField, s.data[0]))
+      .call((sel) => bindSelect(sel, ix, xField, (s) => s.data[0]))
       .attr("stroke", "var(--d3s-surface)")
       .attr("stroke-width", 1)
       .call((sel) =>
@@ -86,10 +95,9 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
 
   return {
     update(rows) {
-      entries = topN(
-        rollup(rows, (r) => String(r[xField]), yField, spec.aggregate ?? "sum"),
-        spec.limit,
-      );
+      // Name order keeps slices in place while live data slides; `limit` orders by size.
+      const all = rollup(rows, (r) => String(r[xField]), yField, spec.aggregate ?? "sum");
+      entries = spec.limit ? topN(all, spec.limit) : all.sort((a, b) => byName(a[0], b[0]));
       draw();
     },
     setTheme(next) {

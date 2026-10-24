@@ -3,18 +3,22 @@ import type { Row } from "../data/types";
 import type { ChartFactory, ChartSpec } from "./types";
 import {
   aggregate,
+  animate,
+  bindSelect,
   bindTooltip,
+  byName,
   createFrame,
   createLegend,
   createTooltip,
   createXYLayers,
+  dimOpacity,
+  interactionsOf,
   margin,
   motionMs,
   need,
   renderAxes,
-  seriesColor,
+  stableColors,
   topN,
-  animate,
 } from "./util";
 
 interface Bar {
@@ -64,11 +68,12 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
     seriesOf,
   );
   const categories = nested.map(([c]) => c);
-  const seriesKeys = [...new Set(nested.flatMap(([, inner]) => inner.map(([s]) => s)))];
+  const seriesKeys = [...new Set(nested.flatMap(([, inner]) => inner.map(([s]) => s)))].sort(byName);
+  // Stable order, so bars do not move while live data slides: by value with `limit`, else by name.
   if (spec.limit) {
     const total = (c: string) => d3.sum(nested.find(([k]) => k === c)![1], (e) => e[1]);
     categories.sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : total(b) - total(a)));
-  }
+  } else categories.sort(byName);
 
   let bars: Bar[];
   if (spec.stacked) {
@@ -100,6 +105,7 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
  */
 export const barChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const horizontal = spec.horizontal ?? false;
@@ -108,8 +114,20 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false), horizontal ? { ...margin, left: 88 } : margin);
   const layers = createXYLayers(frame);
-  const legend = createLegend(el);
+  const legend = createLegend(el, () => {
+    data = toBars(
+      rows.filter((r) => legend.visible(seriesOf(r))),
+      spec,
+      xField,
+      yField,
+    );
+    draw(false);
+  });
   const tooltip = createTooltip(el);
+  const ix = interactionsOf(ctx);
+  let rows: Row[] = [];
+  let allSeries: string[] = [];
+  const seriesOf = (r: Row) => (spec.series ? String(r[spec.series]) : yField);
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
@@ -132,7 +150,8 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
       .domain([lo, hi])
       .nice()
       .range(horizontal ? [0, w] : [h, 0]);
-    const color = seriesColor(theme, seriesKeys);
+    // Colors come from all series, so hiding one does not change the others.
+    const color = colors(theme, allSeries);
     const ms = animated ? motionMs(theme) : 0;
 
     if (horizontal) renderAxes(layers, value as never, band as never, { w, h, fmt, valueAxis: "x" });
@@ -169,15 +188,24 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
       )
       .attr("rx", Math.min(3, theme.radius))
       .attr("fill", (b) => color(b.series))
+      .attr("opacity", (b) => dimOpacity(ix, xField, b.category))
+      .call((s) => bindSelect(s, ix, xField, (b) => b.category))
       .call((s) => bindTooltip(s, tooltip, (b) => [b.category, `${b.series}: ${fmt(b.value)}`]))
       .call((s) => apply(animate(s, ms) as never, rect));
 
-    legend.update(seriesKeys, color);
+    legend.update(allSeries, color);
   }
 
   return {
-    update(rows) {
-      data = toBars(rows, spec, xField, yField);
+    update(next) {
+      rows = next;
+      allSeries = [...new Set(rows.map(seriesOf))].sort(byName);
+      data = toBars(
+        rows.filter((r) => legend.visible(seriesOf(r))),
+        spec,
+        xField,
+        yField,
+      );
       draw();
     },
     setTheme(next) {

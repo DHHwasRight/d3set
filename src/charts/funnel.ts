@@ -1,6 +1,19 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { bindTooltip, createFrame, createTooltip, motionMs, need, rollup, seriesColor, textOn, animate } from "./util";
+import {
+  animate,
+  bindSelect,
+  bindTooltip,
+  createFrame,
+  createTooltip,
+  dimOpacity,
+  interactionsOf,
+  motionMs,
+  need,
+  rollup,
+  stableColors,
+  textOn,
+} from "./util";
 
 interface Stage {
   name: string;
@@ -17,6 +30,7 @@ interface Stage {
  */
 export const funnelChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
@@ -26,6 +40,7 @@ export const funnelChart: ChartFactory = (el, spec, ctx) => {
   const frame = createFrame(el, spec.height ?? 240, () => draw(false), { top: 4, right: 4, bottom: 4, left: 4 });
   const g = frame.svg.append("g");
   const tooltip = createTooltip(el);
+  const ix = interactionsOf(ctx);
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
@@ -39,7 +54,7 @@ export const funnelChart: ChartFactory = (el, spec, ctx) => {
       .scaleLinear()
       .domain([0, d3.max(stages, (s) => s.value) || 1])
       .range([0, w]);
-    const color = seriesColor(
+    const color = colors(
       theme,
       stages.map((s) => s.name),
     );
@@ -64,7 +79,10 @@ export const funnelChart: ChartFactory = (el, spec, ctx) => {
           `${pct(st.ofPrev)} of previous`,
         ]),
       );
-    row.attr("transform", (s) => `translate(0,${band(s.name) ?? 0})`);
+    row
+      .attr("transform", (s) => `translate(0,${band(s.name) ?? 0})`)
+      .attr("opacity", (s) => dimOpacity(ix, xField, s.name))
+      .call((s) => bindSelect(s, ix, xField, (st) => st.name));
     row
       .select("rect")
       .attr("height", band.bandwidth())

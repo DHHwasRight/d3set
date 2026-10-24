@@ -13,6 +13,8 @@ export function renderFilterBar(
 ): { refresh(): void; destroy(): void } {
   el.classList.add("d3s-filters");
   const refreshers: Array<() => void> = [];
+  // Put the store value back into each control when something else (a chart click, code) changes it.
+  const syncers: Array<() => void> = [];
 
   for (const def of defs) {
     const wrap = document.createElement("label");
@@ -48,6 +50,7 @@ export function renderFilterBar(
         };
         fill();
         refreshers.push(fill);
+        syncers.push(fill);
         wrap.append(sel);
         break;
       }
@@ -56,6 +59,11 @@ export function renderFilterBar(
         input.type = "search";
         input.placeholder = "Search…";
         input.addEventListener("input", () => store.set(def.id, input.value || undefined));
+        syncers.push(() => {
+          const v = store.get()[def.id];
+          const text = typeof v === "string" ? v : "";
+          if (input.value !== text) input.value = text;
+        });
         wrap.append(input);
         break;
       }
@@ -87,6 +95,15 @@ export function renderFilterBar(
         };
         a.addEventListener("input", update);
         b.addEventListener("input", update);
+        syncers.push(() => {
+          const v = (store.get()[def.id] ?? {}) as Record<string, string | number | undefined>;
+          const [lo, hi] = isDate ? [v.from, v.to] : [v.min, v.max];
+          // Date inputs take YYYY-MM-DD; a brush range has full timestamps.
+          const show = (x: string | number | undefined) =>
+            x === undefined ? "" : isDate ? String(x).slice(0, 10) : String(x);
+          if (document.activeElement !== a) a.value = show(lo);
+          if (document.activeElement !== b) b.value = show(hi);
+        });
         const pair = document.createElement("div");
         pair.style.display = "flex";
         pair.style.gap = "4px";
@@ -102,15 +119,15 @@ export function renderFilterBar(
   reset.type = "button";
   reset.className = "d3s-filter-reset";
   reset.textContent = "Reset";
-  reset.addEventListener("click", () => {
-    for (const input of el.querySelectorAll("input")) input.value = "";
-    store.reset();
-    refreshers.forEach((f) => f());
-  });
+  reset.addEventListener("click", () => store.reset((id) => !defs.some((d) => d.id === id)));
   el.append(reset);
+  const off = store.subscribe(() => syncers.forEach((f) => f()));
 
   return {
     refresh: () => refreshers.forEach((f) => f()),
-    destroy: () => el.replaceChildren(),
+    destroy: () => {
+      off();
+      el.replaceChildren();
+    },
   };
 }

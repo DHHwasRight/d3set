@@ -1,16 +1,20 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import {
+  animate,
+  bindSelect,
   bindTooltip,
+  byName,
   createFrame,
   createTooltip,
   createXYLayers,
+  dimOpacity,
+  interactionsOf,
   motionMs,
   need,
   renderAxes,
-  seriesColor,
+  stableColors,
   tweenTranslate,
-  animate,
 } from "./util";
 
 interface Box {
@@ -28,6 +32,7 @@ interface Box {
 /** Distribution of `y` per category `x`: quartiles, whiskers at 1.5 × IQR, and outlier dots. */
 export const boxplotChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
@@ -36,6 +41,7 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));
   const layers = createXYLayers(frame);
   const tooltip = createTooltip(el);
+  const ix = interactionsOf(ctx);
 
   function toBox(category: string, values: number[]): Box {
     const v = values.slice().sort(d3.ascending);
@@ -66,7 +72,7 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
     const lo = d3.min(boxes, (b) => Math.min(b.lo, ...b.outliers)) ?? 0;
     const hi = d3.max(boxes, (b) => Math.max(b.hi, ...b.outliers)) ?? 1;
     const y = d3.scaleLinear().domain([lo, hi]).nice().range([h, 0]);
-    const color = seriesColor(
+    const color = colors(
       theme,
       boxes.map((b) => b.category),
     );
@@ -91,6 +97,9 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
           `Q1 ${fmt(b.q1)} · min ${fmt(b.lo)}`,
         ]),
       );
+    g.attr("opacity", (b) => dimOpacity(ix, xField, b.category)).call((s) =>
+      bindSelect(s, ix, xField, (b) => b.category),
+    );
     tweenTranslate(g, ms, (b) => [x(b.category) ?? 0, 0]);
     const bw = x.bandwidth();
     g.select("line.whisker")
@@ -136,7 +145,8 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
     update(rows) {
       boxes = d3
         .groups(rows, (r) => String(r[xField]))
-        .map(([c, list]) => toBox(c, list.map((r) => Number(r[yField])).filter(Number.isFinite)));
+        .map(([c, list]) => toBox(c, list.map((r) => Number(r[yField])).filter(Number.isFinite)))
+        .sort((a, b) => byName(a.category, b.category));
       draw();
     },
     setTheme(next) {

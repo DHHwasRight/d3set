@@ -64,3 +64,5 @@ export type {
   Level,
   Threshold,
 } from "./charts/types";
+export { isDimmed, noInteractions, type Interactions, type RangeValue } from "./charts/interactions";
+export { bindSelect, createLegend, dimOpacity, rangeBrush } from "./charts/util";

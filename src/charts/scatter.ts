@@ -2,17 +2,22 @@ import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { ChartFactory } from "./types";
 import {
+  animate,
   asDate,
+  bindSelect,
   bindTooltip,
+  byName,
   createFrame,
   createLegend,
   createTooltip,
   createXYLayers,
+  dimOpacity,
+  interactionsOf,
   motionMs,
   need,
+  rangeBrush,
   renderAxes,
-  seriesColor,
-  animate,
+  stableColors,
 } from "./util";
 
 interface Dot {
@@ -26,6 +31,7 @@ interface Dot {
 /** One dot per row. `size` makes a bubble chart. `series` colors the dots. `limit` keeps the last N rows (default 2000). */
 export const scatterChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
@@ -33,8 +39,14 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));
   const layers = createXYLayers(frame);
-  const legend = createLegend(el);
+  const legend = createLegend(el, () => draw(false));
   const tooltip = createTooltip(el);
+  const ix = interactionsOf(ctx);
+  let x: d3.ScaleTime<number, number> | d3.ScaleLinear<number, number> = d3.scaleLinear();
+  let y = d3.scaleLinear();
+  // Under the dots: drag on empty space to filter an x and y range; dots stay clickable.
+  const brush = rangeBrush(layers.plot, { mode: "xy", x: () => x, y: () => y, xField, yField, interactions: ix });
+  const dotsG = layers.plot.append("g");
 
   // Stable dot ids, so a sliding window of rows does not move the dots that stay.
   const ids = new WeakMap<Row, number>();
@@ -62,7 +74,7 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
     const { w, h } = frame.inner();
     const isTime = dots[0]?.x instanceof Date;
     const xExt = (d3.extent(dots, (d) => +d.x) as [number, number]) ?? [0, 1];
-    const x = isTime
+    x = isTime
       ? d3
           .scaleTime()
           .domain(xExt.map((v) => new Date(v ?? 0)) as [Date, Date])
@@ -73,7 +85,7 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
           .domain(xExt[0] === undefined ? [0, 1] : xExt)
           .range([0, w])
           .nice();
-    const y = d3
+    y = d3
       .scaleLinear()
       .domain(d3.extent(dots, (d) => d.y).map((v) => v ?? 0) as [number, number])
       .nice()
@@ -84,17 +96,23 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
           .domain([0, d3.max(dots, (d) => d.size) ?? 1])
           .range([2, Math.max(6, Math.min(w, h) / 12)])
       : () => 3.5;
-    const keys = [...new Set(dots.map((d) => d.series))];
-    const color = seriesColor(theme, keys);
+    const keys = [...new Set(dots.map((d) => d.series))].sort(byName);
+    const color = colors(theme, keys);
     renderAxes(layers, x as never, y as never, { w, h, fmt });
+    brush.resize(w, h);
 
-    layers.plot
+    dotsG
       .selectAll<SVGCircleElement, Dot>("circle")
-      .data(dots, (d) => String(d.i))
+      .data(
+        dots.filter((d) => legend.visible(d.series)),
+        (d) => String(d.i),
+      )
       .join((enter) => enter.append("circle").attr("r", 0))
       .attr("fill", (d) => color(d.series))
       .attr("fill-opacity", spec.size ? 0.55 : 0.75)
       .attr("stroke", (d) => color(d.series))
+      .attr("opacity", (d) => dimOpacity(ix, spec.series, d.series))
+      .call((s) => bindSelect(s, ix, spec.series, (d) => d.series))
       .call((s) =>
         bindTooltip(s, tooltip, (d) => [
           d.series,

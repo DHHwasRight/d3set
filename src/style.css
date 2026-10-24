@@ -1,3 +1,10 @@
+/* The `hidden` attribute must win over the display rules below. */
+.d3s-root [hidden],
+.d3s-chart [hidden],
+.d3s-legend[hidden] {
+  display: none !important;
+}
+
 .d3s-root {
   font-family: var(--d3s-font);
   color: var(--d3s-text);
@@ -70,6 +77,7 @@
   position: relative;
 }
 .d3s-chart svg {
+  user-select: none;
   display: block;
   overflow: visible;
 }
@@ -106,6 +114,10 @@
 .d3s-status[data-state="open"]::before {
   content: "● ";
   color: var(--d3s-positive);
+}
+.d3s-status[data-state="paused"]::before {
+  content: "❚❚ ";
+  color: var(--d3s-warning);
 }
 .d3s-status[data-state="error"]::before {
   content: "● ";
@@ -388,4 +400,120 @@
 .d3s-slo-budget-fill {
   height: 100%;
   transition: width 0.25s;
+}
+
+/* Dashboard header: filters, time window, pause, status */
+.d3s-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--d3s-space-sm);
+  flex-wrap: wrap;
+}
+.d3s-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--d3s-space-sm);
+  font-size: var(--d3s-font-label);
+}
+.d3s-segmented {
+  display: inline-flex;
+  border: 1px solid var(--d3s-grid);
+  border-radius: var(--d3s-radius);
+  overflow: hidden;
+}
+.d3s-segmented button,
+.d3s-pause {
+  font: inherit;
+  color: var(--d3s-text-muted);
+  background: var(--d3s-surface);
+  border: 0;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.d3s-segmented button + button {
+  border-left: 1px solid var(--d3s-grid);
+}
+.d3s-segmented button[aria-pressed="true"] {
+  color: var(--d3s-bg);
+  background: var(--d3s-accent);
+}
+.d3s-pause {
+  border: 1px solid var(--d3s-grid);
+  border-radius: var(--d3s-radius);
+}
+.d3s-pause[aria-pressed="true"] {
+  color: var(--d3s-warning);
+  border-color: var(--d3s-warning);
+}
+
+/* Active filter chips */
+.d3s-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: var(--d3s-font-label);
+}
+.d3s-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 10px;
+  border-radius: 999px;
+  background: var(--d3s-surface);
+  border: 1px solid var(--d3s-grid);
+}
+.d3s-chip[data-source="chart"] {
+  border-color: var(--d3s-accent);
+}
+.d3s-chip b {
+  font-weight: 600;
+  color: var(--d3s-text-muted);
+}
+.d3s-chip button {
+  font: inherit;
+  line-height: 1;
+  color: var(--d3s-text-muted);
+  background: none;
+  border: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.d3s-chip button:hover {
+  color: var(--d3s-text);
+  background: var(--d3s-grid);
+}
+
+/* Brush and selection */
+.d3s-chart .d3s-brush .selection {
+  fill: var(--d3s-accent);
+  fill-opacity: 0.15;
+  stroke: var(--d3s-accent);
+}
+.d3s-chart [style*="cursor: pointer"]:hover {
+  filter: brightness(1.08);
+}
+.d3s-cell-link:hover {
+  text-decoration: underline;
+}
+
+/* Interactive legend */
+.d3s-legend-item {
+  font: inherit;
+  color: var(--d3s-text-muted);
+  background: none;
+  border: 0;
+  padding: 2px 4px;
+  border-radius: var(--d3s-radius);
+  cursor: pointer;
+}
+.d3s-legend-item:hover {
+  background: var(--d3s-bg);
+  color: var(--d3s-text);
+}
+.d3s-legend-item[aria-pressed="false"] {
+  opacity: 0.4;
+  text-decoration: line-through;
 }

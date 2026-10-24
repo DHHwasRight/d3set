@@ -1,7 +1,8 @@
 import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { Theme } from "../theme/theme";
-import type { Aggregate, ChartSpec, Level, Threshold } from "./types";
+import type { Aggregate, ChartContext, ChartSpec, Level, Threshold } from "./types";
+import { isDimmed, noInteractions, type Interactions, type RangeValue } from "./interactions";
 
 export const margin = { top: 8, right: 12, bottom: 24, left: 44 };
 
@@ -189,6 +190,26 @@ export function motionMs(theme: Theme): number {
   return reduce ? 0 : theme.motion;
 }
 
+/** Natural sort for labels: `host-2` before `host-10`. */
+export const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
+
+/**
+ * Colors that stay with their key for the life of a chart. With live data the set and order of keys
+ * change; a plain ordinal scale would then give a series a new color.
+ * New keys get the next palette color, in name order within one call.
+ */
+export function stableColors() {
+  const assigned = new Map<string, number>();
+  return (theme: Theme, keys: string[]) => {
+    for (const k of [...keys].sort(byName)) if (!assigned.has(k)) assigned.set(k, assigned.size);
+    const palette = theme.color.series;
+    return (k: string) => {
+      if (!assigned.has(k)) assigned.set(k, assigned.size);
+      return palette[assigned.get(k)! % palette.length]!;
+    };
+  };
+}
+
 export function seriesColor(theme: Theme, keys: string[]) {
   return d3.scaleOrdinal<string, string>().domain(keys).range(theme.color.series);
 }
@@ -249,20 +270,51 @@ export function topN(entries: Array<[string, number]>, limit?: number): Array<[s
   return [...sorted.slice(0, limit - 1), ["Other", rest]];
 }
 
-/** A legend placed after the chart element. Hidden when there is one series or fewer. */
-export function createLegend(el: HTMLElement) {
+/**
+ * An interactive legend placed after the chart element. Hidden when there is one key or fewer
+ * (unless `force`).
+ * - Click: show only this key. Click it again: show all keys.
+ * - Shift-, Ctrl-, or Cmd-click: hide or show this key.
+ */
+export function createLegend(el: HTMLElement, onChange: () => void = () => {}) {
   const legend = document.createElement("div");
   legend.className = "d3s-legend";
   el.after(legend);
+  const hidden = new Set<string>();
+  let keys: string[] = [];
+
+  const click = (key: string, event: MouseEvent) => {
+    if (event.shiftKey || event.metaKey || event.ctrlKey) {
+      if (hidden.has(key)) hidden.delete(key);
+      else hidden.add(key);
+    } else {
+      const isolated = !hidden.has(key) && keys.every((k) => k === key || hidden.has(k));
+      hidden.clear();
+      if (!isolated) for (const k of keys) if (k !== key) hidden.add(k);
+    }
+    // Never hide every key.
+    if (keys.length && keys.every((k) => hidden.has(k))) hidden.clear();
+    onChange();
+  };
+
   return {
-    update(keys: string[], color: (k: string) => string, force = false) {
+    /** Keys the user has hidden. */
+    hidden: hidden as ReadonlySet<string>,
+    visible: (key: string) => !hidden.has(key),
+    update(next: string[], color: (k: string) => string, force = false) {
+      keys = next;
       legend.hidden = !force && keys.length <= 1;
       legend.replaceChildren(
         ...keys.map((k) => {
-          const item = document.createElement("span");
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = "d3s-legend-item";
+          item.setAttribute("aria-pressed", String(!hidden.has(k)));
+          item.title = "Click: show only this. Shift-click: hide or show.";
           const sw = document.createElement("i");
           sw.style.background = color(k);
           item.append(sw, k);
+          item.addEventListener("click", (e) => click(k, e));
           return item;
         }),
       );
@@ -270,6 +322,8 @@ export function createLegend(el: HTMLElement) {
     destroy: () => legend.remove(),
   };
 }
+
+export type Legend = ReturnType<typeof createLegend>;
 
 /** A tooltip that follows the pointer inside the chart element. */
 export function createTooltip(el: HTMLElement) {
@@ -340,4 +394,106 @@ export function renderMarkers(
     .attr("x", w)
     .style("fill", (t) => thresholdColor(theme, t))
     .text((t) => t.label ?? `${t.op} ${fmt(t.value)}`);
+}
+
+export function interactionsOf(ctx: ChartContext): Interactions {
+  return ctx.interactions ?? noInteractions;
+}
+
+/** Opacity for a mark: dimmed when a selection on `field` excludes `value`. */
+export function dimOpacity(i: Interactions, field: string | undefined, value: string, base = 1): number {
+  return isDimmed(i, field, value) ? base * 0.25 : base;
+}
+
+/**
+ * Click on a mark to cross-filter `field` by `value(d)`. Shift-click adds to the selection.
+ * Marks get a pointer cursor.
+ */
+export function bindSelect<E extends Element, D>(
+  sel: d3.Selection<E, D, d3.BaseType, unknown>,
+  i: Interactions,
+  field: string | undefined,
+  value: (d: D) => string,
+) {
+  if (!field) return;
+  sel.style("cursor", "pointer").on("click.d3s", (event, d) => {
+    const e = event as MouseEvent;
+    e.stopPropagation();
+    i.toggle(field, value(d), e.shiftKey || e.metaKey || e.ctrlKey);
+  });
+}
+
+/** Same as `bindSelect` plus dimming, for HTML elements built by hand. */
+export function selectOnClick(el: HTMLElement, i: Interactions, field: string | undefined, value: string) {
+  if (!field) return;
+  el.style.opacity = String(dimOpacity(i, field, value));
+  el.style.cursor = "pointer";
+  el.addEventListener("click", (event) => {
+    event.stopPropagation();
+    i.toggle(field, value, event.shiftKey || event.metaKey || event.ctrlKey);
+  });
+}
+
+type Invertible = { invert(px: number): number | Date };
+
+const toRange = (lo: number | Date, hi: number | Date): RangeValue =>
+  lo instanceof Date ? { from: lo.toISOString(), to: (hi as Date).toISOString() } : { min: +lo, max: +hi };
+
+/**
+ * A brush that sets range filters: on `xField` (mode `x`), or on `xField` and `yField` (mode `xy`).
+ * Double-click clears the ranges. Returns the brush group, so callers can add hover handlers to it,
+ * and a `resize` function.
+ */
+export function rangeBrush(
+  plot: d3.Selection<SVGGElement, unknown, null, undefined>,
+  o: {
+    mode: "x" | "xy";
+    x: () => Invertible;
+    y?: () => Invertible;
+    xField: string;
+    yField?: string;
+    interactions: Interactions;
+  },
+) {
+  // An explicit extent: the default one reads SVG sizes that are not always available.
+  const brush = (o.mode === "x" ? d3.brushX<unknown>() : d3.brush<unknown>()).extent([
+    [0, 0],
+    [1, 1],
+  ]);
+  const g = plot.append("g").attr("class", "d3s-brush");
+  brush.on("end", (event: d3.D3BrushEvent<unknown>) => {
+    if (!event.selection || !event.sourceEvent) return;
+    g.call(brush.move, null);
+    const x = o.x();
+    if (o.mode === "x") {
+      const [a, b] = event.selection as [number, number];
+      if (b - a < 4) return;
+      o.interactions.setRange(o.xField, toRange(x.invert(a), x.invert(b)));
+      return;
+    }
+    const [[x0, y0], [x1, y1]] = event.selection as [[number, number], [number, number]];
+    if (x1 - x0 < 4 && y1 - y0 < 4) return;
+    const y = o.y!();
+    if (x1 - x0 >= 4) o.interactions.setRange(o.xField, toRange(x.invert(x0), x.invert(x1)));
+    // Screen y grows downward: the bottom edge is the low value.
+    if (y1 - y0 >= 4 && o.yField) o.interactions.setRange(o.yField, toRange(y.invert(y1), y.invert(y0)));
+  });
+  let size: [number, number] = [0, 0];
+  g.call(brush).on("dblclick.d3s", () => {
+    o.interactions.setRange(o.xField, undefined);
+    if (o.mode === "xy" && o.yField) o.interactions.setRange(o.yField, undefined);
+  });
+  return {
+    g,
+    resize(w: number, h: number) {
+      // Re-apply the brush only on a size change: re-applying it during a drag (live data redraws) cancels the drag.
+      if (w === size[0] && h === size[1]) return;
+      size = [w, h];
+      brush.extent([
+        [0, 0],
+        [Math.max(1, w), Math.max(1, h)],
+      ]);
+      g.call(brush);
+    },
+  };
 }

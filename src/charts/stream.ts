@@ -1,6 +1,6 @@
 import type { ChartFactory } from "./types";
 import { h, htmlBody, timeFormat } from "./html";
-import { asDate, need } from "./util";
+import { asDate, interactionsOf, need, selectOnClick } from "./util";
 
 const levelColors: Record<string, string> = {
   error: "var(--d3s-negative)",
@@ -17,7 +17,8 @@ const levelColors: Record<string, string> = {
  * `x`: timestamp field. `y`: message field. `series`: level field (colors the line).
  * `columns`: extra fields shown as tags. `limit`: max lines (default 100).
  */
-export const streamChart: ChartFactory = (el, spec) => {
+export const streamChart: ChartFactory = (el, spec, ctx) => {
+  const ix = interactionsOf(ctx);
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const body = htmlBody(el, spec.height ?? 240, "d3s-stream");
@@ -39,6 +40,8 @@ export const streamChart: ChartFactory = (el, spec) => {
               h("span", "d3s-stream-tag", `${c.label ?? c.field}:${String(r[c.field] ?? "")}`),
             ),
           );
+          // Click a line to filter the dashboard by its level.
+          if (level) selectOnClick(line, ix, spec.series, level);
           line.style.setProperty("--level", levelColors[level.toLowerCase()] ?? "var(--d3s-grid)");
           return line;
         }),

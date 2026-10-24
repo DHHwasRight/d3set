@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { ChartFactory, Level } from "./types";
 import { h, htmlBody, timeFormat } from "./html";
-import { asDate, levelColor, matchThreshold, need } from "./util";
+import { asDate, interactionsOf, levelColor, matchThreshold, need, selectOnClick } from "./util";
 
 const levels: Level[] = ["ok", "warning", "critical"];
 
@@ -17,6 +17,7 @@ export const statusChart: ChartFactory = (el, spec, ctx) => {
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
   const body = htmlBody(el, spec.height ?? 160, "d3s-status-grid");
+  const ix = interactionsOf(ctx);
   let latest: Array<{ name: string; level: Level; value: unknown; seen?: Date }> = [];
 
   const levelOf = (v: unknown): Level => {
@@ -55,6 +56,7 @@ export const statusChart: ChartFactory = (el, spec, ctx) => {
           tile.dataset.level = d.level;
           tile.style.setProperty("--level", levelColor(theme, d.level));
           tile.title = `${d.name}: ${d.level}`;
+          selectOnClick(tile, ix, xField, d.name);
           return tile;
         }),
       ),

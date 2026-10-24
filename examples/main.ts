@@ -112,6 +112,7 @@ const charts: ChartSpec[] = [
 
 const client = createDashboard(document.getElementById("client")!, {
   theme: brand,
+  timeField: "at",
   source: sseSource({ url: STREAM, maxRows: 2000 }),
   filters: [multiSelect("region"), select("product"), range("amount", { min: 0 }), search("customer")],
   charts,
@@ -133,6 +134,8 @@ const latencyRules = [
 
 const ops = createDashboard(document.getElementById("ops")!, {
   theme: brand,
+  timeField: "at",
+  timeWindow: "15m",
   source: sseSource({ url: OPS, maxRows: 8000 }),
   filters: [multiSelect("service"), select("region"), select("host"), search("message")],
   charts: [

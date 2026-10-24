@@ -2,16 +2,19 @@ import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import {
   aggregate,
+  animate,
+  bindSelect,
   bindTooltip,
   createFrame,
   createTooltip,
   createXYLayers,
+  dimOpacity,
+  interactionsOf,
   margin,
   motionMs,
   need,
   renderAxes,
   sequentialColor,
-  animate,
 } from "./util";
 
 interface Cell {
@@ -32,6 +35,7 @@ export const heatmapChart: ChartFactory = (el, spec, ctx) => {
   const frame = createFrame(el, spec.height ?? 240, () => draw(false), { ...margin, left: 72 });
   const layers = createXYLayers(frame);
   const tooltip = createTooltip(el);
+  const ix = interactionsOf(ctx);
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
@@ -57,6 +61,8 @@ export const heatmapChart: ChartFactory = (el, spec, ctx) => {
       .attr("height", y.bandwidth())
       .attr("rx", Math.min(2, theme.radius))
       .call((s) => bindTooltip(s, tooltip, (c) => [`${c.row} · ${c.x}`, fmt(c.value)]))
+      .call((s) => bindSelect(s, ix, xField, (c) => c.x))
+      .attr("opacity", (c) => dimOpacity(ix, xField, c.x))
       .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("fill", (c) => color(c.value)));
   }
 

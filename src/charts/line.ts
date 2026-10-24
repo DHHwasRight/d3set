@@ -1,24 +1,29 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { formatX, toSeriesData, xHover, xScale, type SeriesData, type XValue } from "./xy";
+import { formatX, toSeriesData, xInteract, xScale, type SeriesData, type XValue } from "./xy";
 import {
+  animate,
   createFrame,
   createLegend,
   createTooltip,
   createXYLayers,
+  interactionsOf,
   motionMs,
   need,
   renderAxes,
   renderMarkers,
-  seriesColor,
-  animate,
+  stableColors,
 } from "./util";
 
 type Point = [XValue, number];
 
-/** Lines over a time or numeric x axis. One line per `series` value. */
+/**
+ * Lines over a time or numeric x axis. One line per `series` value.
+ * Drag to zoom (range filter on `x`), double-click to reset, click the legend to show or hide series.
+ */
 export const lineChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
+  const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
@@ -27,43 +32,43 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));
   const layers = createXYLayers(frame);
-  const legend = createLegend(el);
+  const legend = createLegend(el, () => draw(false));
   const tooltip = createTooltip(el);
-  const hover = xHover(
-    layers.plot,
-    () => data.xs,
-    (px) => +x.invert(px),
-    (hx, event) => {
-      if (hx === undefined) return tooltip.hide();
-      hover.moveRule(x(hx as never));
-      const vals = data.table.get(+hx)!;
-      tooltip.show(event, [
-        formatX(hx),
-        ...data.keys.filter((k) => vals.has(k)).map((k) => `${k}: ${fmt(vals.get(k)!)}`),
-      ]);
-    },
-  );
   const linesG = layers.plot.append("g");
+  const pointer = xInteract(layers.plot, {
+    xs: () => data.xs,
+    x: () => x,
+    interactions: interactionsOf(ctx),
+    field: xField,
+    onHover(hx, event) {
+      if (hx === undefined) return tooltip.hide();
+      const vals = data.table.get(+hx)!;
+      const keys = data.keys.filter((k) => legend.visible(k) && vals.has(k));
+      tooltip.show(event, [formatX(hx), ...keys.map((k) => `${k}: ${fmt(vals.get(k)!)}`)]);
+    },
+  });
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
     x = xScale(data, w);
-    const all = [...data.table.values()].flatMap((m) => [...m.values()]);
+    const keys = data.keys.filter(legend.visible);
+    const all = [...data.table.values()].flatMap((m) => keys.filter((k) => m.has(k)).map((k) => m.get(k)!));
     const y = d3
       .scaleLinear()
       .domain([Math.min(0, d3.min(all) ?? 0), d3.max(all) ?? 1])
       .nice()
       .range([h, 0]);
-    const color = seriesColor(theme, data.keys);
+    // Colors come from all keys, so hiding a series does not change the others.
+    const color = colors(theme, data.keys);
     renderAxes(layers, x as never, y as never, { w, h, fmt });
-    hover.resize(w, h);
+    pointer.resize(w, h);
 
     const line = d3
       .line<Point>()
       .x((p) => x(p[0] as never))
       .y((p) => y(p[1]))
       .curve(d3.curveMonotoneX);
-    const series = data.keys.map(
+    const series = keys.map(
       (k) =>
         [
           k,
@@ -94,6 +99,7 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
       draw(false);
     },
     destroy() {
+      pointer.destroy();
       tooltip.destroy();
       legend.destroy();
       frame.destroy();

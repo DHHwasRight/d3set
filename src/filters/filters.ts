@@ -146,9 +146,13 @@ export function distinctValues(rows: Row[], field: string): string[] {
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
-/** Holds filter state and notifies listeners on change. */
+/**
+ * Holds filter state and notifies listeners on change.
+ * Each value can record its source: the id of the chart that set it (cross-filter).
+ */
 export class FilterStore {
   private state: FilterState;
+  private sources = new Map<string, string>();
   private listeners = new Set<(s: FilterState) => void>();
 
   constructor(initial: FilterState = {}) {
@@ -159,13 +163,23 @@ export class FilterStore {
     return this.state;
   }
 
-  set(id: string, value: FilterValue): void {
+  /** Set a filter value. `source` is the chart id for a cross-filter; leave it out for the filter bar or code. */
+  set(id: string, value: FilterValue, source?: string): void {
     this.state = { ...this.state, [id]: value };
+    if (source && value !== undefined) this.sources.set(id, source);
+    else this.sources.delete(id);
     this.emit();
   }
 
-  reset(): void {
-    this.state = {};
+  /** The chart id that set this filter, if a chart set it. */
+  sourceOf(id: string): string | undefined {
+    return this.sources.get(id);
+  }
+
+  /** Clear filters: all of them, or only those that `keep` rejects. */
+  reset(keep?: (id: string) => boolean): void {
+    this.state = keep ? Object.fromEntries(Object.entries(this.state).filter(([id]) => keep(id))) : {};
+    for (const id of [...this.sources.keys()]) if (!(id in this.state)) this.sources.delete(id);
     this.emit();
   }
 

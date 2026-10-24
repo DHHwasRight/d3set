@@ -1,8 +1,18 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { bindTooltip, createFrame, createTooltip, createXYLayers, motionMs, need, renderAxes, animate } from "./util";
+import {
+  animate,
+  createFrame,
+  createTooltip,
+  createXYLayers,
+  interactionsOf,
+  motionMs,
+  need,
+  rangeBrush,
+  renderAxes,
+} from "./util";
 
-/** Distribution of the numeric field `y` in `bins` buckets (default 20). */
+/** Distribution of the numeric field `y` in `bins` buckets (default 20). Drag to filter a value range; double-click to clear. */
 export const histogramChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
   const yField = need(spec, "y");
@@ -12,16 +22,29 @@ export const histogramChart: ChartFactory = (el, spec, ctx) => {
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));
   const layers = createXYLayers(frame);
   const tooltip = createTooltip(el);
+  const barsG = layers.plot.append("g");
+  let x = d3.scaleLinear();
+  let bins: Array<d3.Bin<number, number>> = [];
+  // Drag to filter the dashboard to a value range; double-click to clear.
+  const brush = rangeBrush(layers.plot, { mode: "x", x: () => x, xField: yField, interactions: interactionsOf(ctx) });
+  brush.g
+    .on("pointermove.d3s", (event: PointerEvent) => {
+      const v = x.invert(d3.pointer(event)[0]);
+      const b = bins.find((b) => v >= b.x0! && v < b.x1!);
+      if (b) tooltip.show(event, [`${fmt(b.x0!)} – ${fmt(b.x1!)}`, `${b.length} rows`]);
+      else tooltip.hide();
+    })
+    .on("pointerleave.d3s", () => tooltip.hide());
 
   function draw(animated = true) {
     const { w, h } = frame.inner();
     const ext = d3.extent(values) as [number, number] | [undefined, undefined];
-    const x = d3
+    x = d3
       .scaleLinear()
       .domain(ext[0] === undefined ? [0, 1] : [ext[0], ext[1]!])
       .nice(spec.bins ?? 20)
       .range([0, w]);
-    const bins = d3
+    bins = d3
       .bin()
       .domain(x.domain() as [number, number])
       .thresholds(x.ticks(spec.bins ?? 20))(values);
@@ -39,14 +62,14 @@ export const histogramChart: ChartFactory = (el, spec, ctx) => {
         .tickSizeOuter(0),
     );
 
-    layers.plot
+    brush.resize(w, h);
+    barsG
       .selectAll<SVGRectElement, d3.Bin<number, number>>("rect")
       .data(bins)
       .join((enter) => enter.append("rect").attr("y", h).attr("height", 0))
       .attr("fill", "var(--d3s-accent)")
       .attr("x", (b) => x(b.x0!) + 1)
       .attr("width", (b) => Math.max(0, x(b.x1!) - x(b.x0!) - 1))
-      .call((s) => bindTooltip(s, tooltip, (b) => [`${fmt(b.x0!)} – ${fmt(b.x1!)}`, `${b.length} rows`]))
       .call((s) =>
         animate(s, animated ? motionMs(theme) : 0)
           .attr("y", (b) => y(b.length))

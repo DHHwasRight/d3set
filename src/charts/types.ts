@@ -1,5 +1,6 @@
 import type { Row } from "../data/types";
 import type { Theme } from "../theme/theme";
+import type { Interactions } from "./interactions";
 
 export type Aggregate = "sum" | "count" | "avg" | "min" | "max" | "last";
 
@@ -96,6 +97,8 @@ export interface ChartSpec {
 
 export interface ChartContext {
   theme: Theme;
+  /** Dashboard links: cross-filters, brush ranges, shared hover. Absent when the chart is mounted alone. */
+  interactions?: Interactions;
 }
 
 export interface Chart {
