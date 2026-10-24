@@ -25,5 +25,23 @@ export {
 } from "./filters/filters";
 export { renderFilterBar } from "./filters/bar";
 
-export { barChart, getChart, kpiChart, lineChart, registerChart } from "./charts/index";
-export type { Aggregate, Chart, ChartContext, ChartFactory, ChartSpec } from "./charts/types";
+export {
+  areaChart,
+  barChart,
+  boxplotChart,
+  builtInCharts,
+  donutChart,
+  funnelChart,
+  gaugeChart,
+  getChart,
+  heatmapChart,
+  histogramChart,
+  kpiChart,
+  lineChart,
+  pieChart,
+  registerChart,
+  scatterChart,
+  tableChart,
+  treemapChart,
+} from "./charts/index";
+export type { Aggregate, Chart, ChartContext, ChartFactory, ChartSpec, ColumnSpec } from "./charts/types";

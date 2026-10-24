@@ -63,6 +63,7 @@ export function createDashboard(el: HTMLElement, opts: DashboardOptions): Dashbo
   const charts: Chart[] = opts.charts.map((spec) => {
     const card = document.createElement("section");
     card.className = "d3s-card";
+    if (spec.span && spec.span > 1) card.dataset.span = String(spec.span);
     if (spec.title) {
       const h = document.createElement("h3");
       h.textContent = spec.title;

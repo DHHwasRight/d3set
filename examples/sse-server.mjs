@@ -17,6 +17,9 @@ const makeSale = (at = new Date()) => ({
   product: pick(products),
   customer: pick(customers),
   amount: Math.round(20 + Math.random() * 480),
+  seats: 1 + Math.floor(Math.random() ** 2 * 50),
+  // Each event reached one funnel stage. Later stages are rarer.
+  stage: pick(["Visited", "Visited", "Visited", "Visited", "Signed up", "Signed up", "Signed up", "Trial", "Trial", "Paid"]),
 });
 
 // Last 30 minutes of history.

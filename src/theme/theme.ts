@@ -14,8 +14,13 @@ export interface Theme {
     grid: string;
     axis: string;
     accent: string;
+    /** Good and bad changes (KPI deltas). */
+    positive: string;
+    negative: string;
     /** Categorical palette, used in order for series. */
     series: string[];
+    /** Low and high ends of the scale for continuous values (heatmap, gauge). */
+    sequential: [string, string];
   };
   space: { xs: number; sm: number; md: number; lg: number };
   radius: number;
@@ -39,7 +44,10 @@ export const lightTheme: Theme = {
     grid: "#e6e6ea",
     axis: "#9a9aa5",
     accent: "#4f46e5",
+    positive: "#059669",
+    negative: "#dc2626",
     series: ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#a855f7", "#64748b"],
+    sequential: ["#eef2ff", "#3730a3"],
   },
   space: { xs: 4, sm: 8, md: 16, lg: 24 },
   radius: 6,
@@ -57,7 +65,10 @@ export const darkTheme: Theme = {
     grid: "#2a2a31",
     axis: "#5c5c66",
     accent: "#818cf8",
+    positive: "#34d399",
+    negative: "#f87171",
     series: ["#818cf8", "#38bdf8", "#34d399", "#fbbf24", "#f87171", "#c084fc", "#94a3b8"],
+    sequential: ["#1e1b4b", "#a5b4fc"],
   },
 };
 
@@ -88,6 +99,8 @@ export function themeToCssVars(theme: Theme): Record<string, string> {
     "--d3s-grid": theme.color.grid,
     "--d3s-axis": theme.color.axis,
     "--d3s-accent": theme.color.accent,
+    "--d3s-positive": theme.color.positive,
+    "--d3s-negative": theme.color.negative,
     "--d3s-radius": `${theme.radius}px`,
     "--d3s-space-sm": `${theme.space.sm}px`,
     "--d3s-space-md": `${theme.space.md}px`,

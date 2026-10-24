@@ -87,7 +87,29 @@ Read or set filters from code: `dashboard.filters.set("region", ["EU"])`.
 
 ## Charts
 
-Built in: `line`, `bar`, `kpi`. Spec fields: `type`, `title`, `x`, `y`, `series`, `aggregate` (`sum | count | avg | min | max | last`), `format` (d3-format), `height`.
+Every spec takes `type`, `title`, `height`, `format` (d3-format), and `span` (dashboard columns, 1 to 3).
+Hover shows a tooltip on every chart except `kpi`, `gauge`, and `table`.
+
+| Type | Shows | Reads | Default aggregate |
+| --- | --- | --- | --- |
+| `line` | Trend over time or a number axis | `x`, `y`, `series` | last value per x |
+| `area` | Stacked trend (`stacked: false` overlaps) | `x`, `y`, `series`, `stacked` | last value per x |
+| `bar` | Values per category, grouped or `stacked`, `horizontal` | `x`, `y`, `series`, `limit` | `sum` |
+| `pie` / `donut` | Share of a total | `x`, `y`, `innerRadius`, `limit` | `sum` |
+| `scatter` | One dot per row, bubble with `size` | `x`, `y`, `size`, `series`, `limit` | none |
+| `heatmap` | `x` columns × `series` rows, colored by value | `x`, `series`, `y` | `sum` |
+| `histogram` | Distribution of one number | `y`, `bins` | count |
+| `boxplot` | Quartiles, 1.5 × IQR whiskers, outliers per category | `x`, `y` | none |
+| `treemap` | Nested rectangles by size, grouped by `series` | `x`, `y`, `series`, `limit` | `sum` |
+| `funnel` | Stage conversion (`options.sort: true` sorts by value) | `x`, `y` | `sum` |
+| `gauge` | One value on a `min`–`max` arc | `y`, `min`, `max` | `sum` |
+| `kpi` | Big number; with `x`, a trend line and change vs previous x | `y`, `x` | `sum` |
+| `table` | Sortable rows; with `x` + `aggregate`, one line per group | `columns`, `x`, `y`, `series`, `limit` | none |
+
+`aggregate` is one of `sum | count | avg | min | max | last`.
+`limit` keeps the largest categories and groups the rest into "Other" (for `table`: max lines; for `scatter`: last N rows).
+
+Theme tokens for charts: `color.series` (categories), `color.sequential` (heatmap, gauge), `color.positive` / `color.negative` (KPI change).
 
 Add your own chart type. It gets the same theme, data, and filters:
 
