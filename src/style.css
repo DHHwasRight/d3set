@@ -220,6 +220,8 @@
   display: grid;
   gap: 4px;
   align-content: start;
+  /* Rows have overflow: hidden, so without this they shrink to fit a short chart. */
+  grid-auto-rows: max-content;
 }
 .d3s-toplist-row {
   position: relative;
