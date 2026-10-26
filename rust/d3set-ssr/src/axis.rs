@@ -3,7 +3,8 @@
 use crate::format::{js_number, Format};
 use crate::scale::{Band, Linear, Time};
 
-/// The pixel offset d3-axis adds on displays with `devicePixelRatio > 1`, which is 0.
+/// The pixel offset d3-axis adds: 0 on displays with `devicePixelRatio > 1`, 0.5 otherwise (crisp
+/// 1px lines). The server cannot know the display; it draws for high-density screens.
 const OFFSET: f64 = 0.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -147,17 +148,18 @@ pub fn axis(
         })
         .collect();
     let [r0, r1] = scale.range();
+    // d3-axis with `tickSizeOuter(0)`, as d3set uses it, writes the short path: one segment.
     let domain = with_domain.then(|| match orient {
         Orient::Bottom => format!(
-            "M{},0V{}H{}V0",
+            "M{},{}H{}",
             js_number(r0 + OFFSET),
             js_number(OFFSET),
             js_number(r1 + OFFSET)
         ),
         Orient::Left => format!(
-            "M0,{}H{}V{}H0",
-            js_number(r0 + OFFSET),
+            "M{},{}V{}",
             js_number(OFFSET),
+            js_number(r0 + OFFSET),
             js_number(r1 + OFFSET)
         ),
     });

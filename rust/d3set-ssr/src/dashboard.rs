@@ -196,9 +196,9 @@ pub struct Card {
     pub chart: Rendered,
 }
 
-/// Columns and card width of `.d3s-grid`: `repeat(auto-fill, minmax(min(100%, 320px), 1fr))`, 16px gaps.
-pub fn grid(width: f64) -> (usize, f64) {
-    let gap = 16.0;
+/// Columns and card width of `.d3s-grid`: `repeat(auto-fill, minmax(min(100%, 320px), 1fr))`,
+/// with `gap` between cards (the theme's `space_md`, as the CSS uses).
+pub fn grid(width: f64, gap: f64) -> (usize, f64) {
     let columns = (((width + gap) / (320.0 + gap)).floor() as usize).max(1);
     (
         columns,
@@ -206,11 +206,12 @@ pub fn grid(width: f64) -> (usize, f64) {
     )
 }
 
-/// Width of a chart inside a card that spans `span` columns: card padding is 16px each side.
-pub fn chart_width(width: f64, span: u8) -> f64 {
-    let (columns, card) = grid(width);
+/// Width of a chart inside a card that spans `span` columns. The grid gap and the card padding
+/// are both `space` (the theme's `space_md`, `--d3s-space-md` in the CSS).
+pub fn chart_width(width: f64, span: u8, space: f64) -> f64 {
+    let (columns, card) = grid(width, space);
     let span = usize::from(span.max(1)).min(columns) as f64;
-    card * span + 16.0 * (span - 1.0) - 32.0
+    card * span + space * (span - 1.0) - 2.0 * space
 }
 
 impl Dashboard {
@@ -222,8 +223,12 @@ impl Dashboard {
             .iter()
             .map(|spec| {
                 let span = spec.span.unwrap_or(1);
-                let chart =
-                    crate::chart::render(spec, rows, self.theme, chart_width(self.width, span))?;
+                let chart = crate::chart::render(
+                    spec,
+                    rows,
+                    self.theme,
+                    chart_width(self.width, span, f64::from(self.theme.space_md)),
+                )?;
                 Ok(Card {
                     title: spec.title.clone(),
                     span,

@@ -47,6 +47,9 @@
   display: grid;
   gap: var(--d3s-space-md);
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  /* Spans follow the grid's own width, not the viewport: a dashboard embedded in a narrow column
+     must not force columns it does not have (the server sizes cards the same way). */
+  container-type: inline-size;
 }
 .d3s-card {
   background: var(--d3s-surface);
@@ -61,9 +64,15 @@
 .d3s-card[data-span="3"] {
   grid-column: span 3;
 }
-@media (max-width: 720px) {
+/* Two columns need 2 × 320px + a 16px gap; three need 3 × 320px + 2 gaps. */
+@container (max-width: 655px) {
   .d3s-card[data-span] {
     grid-column: auto;
+  }
+}
+@container (min-width: 656px) and (max-width: 991px) {
+  .d3s-card[data-span="3"] {
+    grid-column: span 2;
   }
 }
 .d3s-card h3 {
@@ -84,6 +93,8 @@
 .d3s-chart .tick text {
   fill: var(--d3s-text-muted);
   font-size: var(--d3s-font-axis);
+  /* d3-axis sets font-family="sans-serif" on its group: use the theme font. */
+  font-family: var(--d3s-font);
 }
 .d3s-chart .domain {
   stroke: var(--d3s-axis);
@@ -110,6 +121,9 @@
 .d3s-status {
   font-size: var(--d3s-font-label);
   color: var(--d3s-text-muted);
+  /* A fixed width: the label changes (Connecting, Live, Paused) without moving the controls. */
+  display: inline-block;
+  min-width: 7.5em;
 }
 .d3s-status[data-state="open"]::before {
   content: "● ";
@@ -380,7 +394,8 @@
 
 .d3s-note p {
   margin: 0 0 var(--d3s-space-sm);
-  line-height: 1.5;
+  /* A fixed line box: the note keeps its height when the font size changes. */
+  line-height: 22px;
   color: var(--d3s-text-muted);
 }
 
@@ -518,4 +533,9 @@
 .d3s-legend-item[aria-pressed="false"] {
   opacity: 0.4;
   text-decoration: line-through;
+}
+
+/* A multi-select shows four options at a fixed height: its natural height follows the font. */
+.d3s-filter select[multiple] {
+  height: 82px;
 }

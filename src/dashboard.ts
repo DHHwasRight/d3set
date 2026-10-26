@@ -57,6 +57,15 @@ export interface Dashboard {
   destroy(): void;
 }
 
+/** Status labels, the same words the server renders, so hydration does not change the text. */
+const STATUS_LABELS: Record<string, string> = {
+  idle: "Connecting",
+  connecting: "Connecting",
+  open: "Live",
+  error: "Reconnecting",
+  closed: "Closed",
+};
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = "", text = ""): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   if (className) e.className = className;
@@ -145,7 +154,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
   const showStatus = () => {
     if (!statusEl) return;
     statusEl.dataset.state = paused ? "paused" : sourceState;
-    statusEl.textContent = paused ? "Paused" : sourceState === "open" ? "Live" : sourceState;
+    statusEl.textContent = paused ? "Paused" : (STATUS_LABELS[sourceState] ?? sourceState);
   };
   if (opts.showStatus !== false) {
     statusEl = el("span", "d3s-status");

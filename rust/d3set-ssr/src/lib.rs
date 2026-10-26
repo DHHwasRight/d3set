@@ -15,6 +15,7 @@ pub mod format;
 pub mod path;
 pub mod payload;
 pub mod scale;
+pub mod sources;
 pub mod spec;
 pub mod theme;
 pub mod time;
