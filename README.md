@@ -46,7 +46,7 @@ Charts respect `prefers-reduced-motion`.
 
 ## Interactions
 
-Charts in a dashboard work together, like in Datadog, Grafana, or Superset.
+Charts in a dashboard work together, like in Datadog or Grafana.
 
 | Gesture | Where | Effect |
 | --- | --- | --- |
@@ -110,14 +110,42 @@ hydrate(document); // every [data-d3s-dashboard] and [data-d3s-chart] with a pay
   (130 cases). Build the renderer first: `mise exec -- cargo build -p d3set-ssr --example render`.
   To port or change a chart, see `rust/d3set-ssr/PORTING.md`.
 
-### Gallery
+### Galleries
 
-`rust/gallery` is a [brocanth](../brocanth) app: every chart type, server-rendered and hydrated, two live dashboards,
-and sample feeds typed in Rust and written as JSON by jt (`/data/ops`, `/data/sales`, `/events/{feed}`).
+The same gallery exists four times, once per way to use d3set:
+
+| Gallery | Code | Address | Run |
+| --- | --- | --- | --- |
+| Vanilla | `galleries/vanilla` | http://localhost:3300 | `npm run dev -w galleries/vanilla` |
+| Rust | `rust/gallery` | http://localhost:3000 | `mise run gallery` |
+| React | `galleries/react` | http://localhost:3310 | `npm run dev -w galleries/react` |
+| Next.js | `galleries/next` | http://localhost:3320 | `npm run dev -w galleries/next` |
+
+The Rust gallery is a [brocanth](../brocanth) app: every chart type, server-rendered and hydrated, two live
+dashboards, an analytics page, and sample feeds typed in Rust and written as JSON by jt (`/data/ops`,
+`/data/sales`, `/events/{feed}`). `mise run gallery` builds the browser bundle into `rust/gallery/assets`,
+then serves the gallery.
+
+The Rust gallery is the reference. The framework galleries draw the pages that
+`galleries/shared/scripts/export.mjs` exports from it. Export the pages again after you change the Rust
+gallery:
 
 ```sh
-mise run gallery   # builds the browser bundle into rust/gallery/assets, then serves http://127.0.0.1:3000
+GALLERY_NOW=2026-10-01T00:00:00Z GALLERY_ADDR=127.0.0.1:3140 ./target/debug/gallery &
+node galleries/shared/scripts/export.mjs http://127.0.0.1:3140
 ```
+
+Each gallery shows its own code: the snippets on its pages are the files in its `snippets/` folder.
+
+The switch at the top right opens the same page in the other galleries. The links use the addresses above.
+To change them, set `GALLERY_LIBRARIES`, for example
+`GALLERY_LIBRARIES=vanilla=https://vanilla.example.com,rsx=https://rust.example.com,react=...,next=...`.
+The Rust gallery reads it when it starts. The framework galleries read it when they build.
+
+Code snippets in the Rust gallery are highlighted on the server with [giallo](https://github.com/getzola/giallo)
+(TextMate grammars and VS Code themes): Rust, JSON, and TypeScript from its built-in set, rsx and jt from
+`rsx::grammar` and `jt::grammar`, the same grammars their VS Code extensions ship. Until those modules
+are pushed, `Cargo.toml` patches `rsx` and `jt` to the sibling checkouts `../templ` and `../jt`.
 
 Append `?js=off` to any page to see what the server sends. Rust 1.98 is pinned in `mise.toml`: rsx proc macros
 do not load across compiler versions.
@@ -251,5 +279,7 @@ registerChart("table", (el, spec, { theme }) => ({
 | `npm test` | Vitest + jsdom |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run format` | Prettier |
+| `npm run e2e` | Playwright against the built Rust gallery (installed Chrome): layout shift while loading, hydration parity, partial navigation, the library switch |
+| `D3SET_CONFORMITY=1 npm run e2e` | Also check that the vanilla, React and Next.js galleries draw the same pages as the Rust gallery (`D3SET_GALLERIES=vanilla,react` limits the run) |
 | `npm run build:browser` | `dist-browser/d3set.js`: one ES module with d3 included, for pages without a bundler |
 | `mise run gallery` | Build the browser bundle and serve the Rust gallery |
