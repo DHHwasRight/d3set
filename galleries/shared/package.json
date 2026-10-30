@@ -1,0 +1,20 @@
+{
+  "name": "@d3set/gallery-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Rust gallery's pages, exported for the framework galleries, and the code they share.",
+  "exports": {
+    ".": "./src/fixture.ts",
+    "./docs": "./src/docs.ts",
+    "./libraries": "./src/libraries.ts",
+    "./highlight": "./src/highlight.ts",
+    "./vite": "./src/vite.ts"
+  },
+  "scripts": {
+    "export": "node scripts/export.mjs"
+  },
+  "dependencies": {
+    "shiki": "^4.5.0"
+  }
+}

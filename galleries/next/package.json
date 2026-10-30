@@ -1,0 +1,13 @@
+{
+  "name": "@d3set/gallery-next",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The d3set gallery in Next.js (App Router): every chart drawn on the server by Server Components with @d3set/next/server, then hydrated.",
+  "scripts": {
+    "dev": "next dev -p 3320 -H 127.0.0.1",
+    "build": "next build",
+    "serve": "next build && next start -p 3320 -H 127.0.0.1",
+    "typecheck": "tsc --noEmit"
+  }
+}

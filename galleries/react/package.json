@@ -1,0 +1,13 @@
+{
+  "name": "@d3set/gallery-react",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The d3set gallery in React on the client: every chart drawn in the browser with @d3set/react.",
+  "scripts": {
+    "dev": "vite --port 3310 --strictPort --host 127.0.0.1",
+    "build": "vite build",
+    "serve": "vite build && vite preview --port 3310 --strictPort --host 127.0.0.1",
+    "typecheck": "tsc --noEmit"
+  }
+}
