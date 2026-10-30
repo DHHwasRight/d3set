@@ -7,12 +7,15 @@ import {
   createLegend,
   createTooltip,
   createXYLayers,
+  edgesOf,
   interactionsOf,
   motionMs,
   need,
   renderAxes,
   renderMarkers,
   stableColors,
+  xyLook,
+  xyMargin,
 } from "./util";
 
 type Point = [XValue, number];
@@ -20,6 +23,7 @@ type Point = [XValue, number];
 /**
  * Lines over a time or numeric x axis. One line per `series` value.
  * Drag to zoom (range filter on `x`), double-click to reset, click the legend to show or hide series.
+ * `options.curve: "linear"` draws straight segments instead of `curveMonotoneX`.
  */
 export const lineChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
@@ -27,10 +31,12 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
+  const look = xyLook(spec);
+  const curve = spec.options?.curve === "linear" ? d3.curveLinear : d3.curveMonotoneX;
   let data: SeriesData = toSeriesData([], spec, xField, yField);
   let x = xScale(data, 1);
 
-  const frame = createFrame(el, spec.height ?? 240, () => draw(false));
+  const frame = createFrame(el, spec.height ?? 240, () => draw(false), xyMargin(spec));
   const layers = createXYLayers(frame);
   const legend = createLegend(el, () => draw(false));
   const tooltip = createTooltip(el);
@@ -60,14 +66,21 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
       .range([h, 0]);
     // Colors come from all keys, so hiding a series does not change the others.
     const color = colors(theme, data.keys);
-    renderAxes(layers, x as never, y as never, { w, h, fmt });
+    renderAxes(layers, x as never, y as never, {
+      w,
+      h,
+      fmt,
+      edges: look.edges ? edgesOf(data.xs) : undefined,
+      right: look.right,
+      none: look.none,
+    });
     pointer.resize(w, h);
 
     const line = d3
       .line<Point>()
       .x((p) => x(p[0] as never))
       .y((p) => y(p[1]))
-      .curve(d3.curveMonotoneX);
+      .curve(curve);
     const series = keys.map(
       (k) =>
         [

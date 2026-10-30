@@ -12,6 +12,7 @@ import {
   createTooltip,
   createXYLayers,
   dimOpacity,
+  edgesOf,
   interactionsOf,
   margin,
   motionMs,
@@ -19,6 +20,8 @@ import {
   renderAxes,
   stableColors,
   topN,
+  xyLook,
+  xyMargin,
 } from "./util";
 
 interface Bar {
@@ -36,13 +39,24 @@ interface BarData {
   bars: Bar[];
 }
 
+/** `options.categories: "a|b|c"`: the fixed categories, in order, without repeats. */
+export function fixedCategories(spec: ChartSpec): string[] | undefined {
+  const c = spec.options?.categories;
+  return typeof c === "string" && c !== "" ? [...new Set(c.split("|"))] : undefined;
+}
+
 export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: string): BarData {
   const how = spec.aggregate ?? "sum";
+  const fixed = fixedCategories(spec);
+  if (fixed) {
+    const keep = new Set(fixed);
+    rows = rows.filter((r) => keep.has(String(r[xField])));
+  }
   const seriesOf = (r: Row) => (spec.series ? String(r[spec.series]) : yField);
 
   // Keep the largest categories when `limit` is set. The others become "Other".
   let catOf = (r: Row) => String(r[xField]);
-  if (spec.limit) {
+  if (spec.limit && !fixed) {
     const totals = d3.rollups(
       rows,
       (v) =>
@@ -67,10 +81,12 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
     catOf,
     seriesOf,
   );
-  const categories = nested.map(([c]) => c);
+  const categories = fixed ?? nested.map(([c]) => c);
   const seriesKeys = [...new Set(nested.flatMap(([, inner]) => inner.map(([s]) => s)))].sort(byName);
   // Stable order, so bars do not move while live data slides: by value with `limit`, else by name.
-  if (spec.limit) {
+  if (fixed) {
+    // Fixed order: nothing to sort.
+  } else if (spec.limit) {
     const total = (c: string) => d3.sum(nested.find(([k]) => k === c)![1], (e) => e[1]);
     categories.sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : total(b) - total(a)));
   } else categories.sort(byName);
@@ -78,7 +94,7 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
   let bars: Bar[];
   if (spec.stacked) {
     const wide = categories.map((c) => {
-      const inner = new Map(nested.find(([k]) => k === c)![1]);
+      const inner = new Map(nested.find(([k]) => k === c)?.[1]);
       return Object.fromEntries(seriesKeys.map((s) => [s, inner.get(s) ?? 0])) as Record<string, number>;
     });
     const stack = d3.stack<Record<string, number>>().keys(seriesKeys).offset(d3.stackOffsetDiverging)(wide);
@@ -102,6 +118,9 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
 /**
  * Bars by category. Series are grouped side by side, or stacked with `stacked: true`.
  * `horizontal: true` puts categories on the y axis. Default aggregate: `sum`.
+ * `options.categories: "a|b|c"` fixes the categories and their order: a category with no rows keeps
+ * its band, rows of other categories are left out (also from the legend), and `limit` is ignored.
+ * `options.axes: "none"` draws no axes or grid lines and no margin, so the bars fill the frame.
  */
 export const barChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
@@ -110,9 +129,15 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
   const yField = need(spec, "y");
   const horizontal = spec.horizontal ?? false;
   const fmt = d3.format(spec.format ?? ".3~s");
+  const look = xyLook(spec);
   let data = toBars([], spec, xField, yField);
 
-  const frame = createFrame(el, spec.height ?? 240, () => draw(false), horizontal ? { ...margin, left: 88 } : margin);
+  const frame = createFrame(
+    el,
+    spec.height ?? 240,
+    () => draw(false),
+    xyMargin(spec, horizontal ? { ...margin, left: 88 } : margin, horizontal),
+  );
   const layers = createXYLayers(frame);
   const legend = createLegend(el, () => {
     data = toBars(
@@ -154,8 +179,10 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
     const color = colors(theme, allSeries);
     const ms = animated ? motionMs(theme) : 0;
 
-    if (horizontal) renderAxes(layers, value as never, band as never, { w, h, fmt, valueAxis: "x" });
-    else renderAxes(layers, band as never, value as never, { w, h, fmt });
+    const edges = look.edges ? edgesOf(categories) : undefined;
+    const none = look.none;
+    if (horizontal) renderAxes(layers, value as never, band as never, { w, h, fmt, valueAxis: "x", edges, none });
+    else renderAxes(layers, band as never, value as never, { w, h, fmt, edges, right: look.right, none });
 
     const offset = (b: Bar) => (band(b.category) ?? 0) + (sub(spec.stacked ? "all" : b.series) ?? 0);
     const zero = value(0);
@@ -198,7 +225,8 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
 
   return {
     update(next) {
-      rows = next;
+      const fixed = fixedCategories(spec);
+      rows = fixed ? next.filter((r) => fixed.includes(String(r[xField]))) : next;
       allSeries = [...new Set(rows.map(seriesOf))].sort(byName);
       data = toBars(
         rows.filter((r) => legend.visible(seriesOf(r))),

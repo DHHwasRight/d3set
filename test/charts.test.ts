@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { builtInCharts, getChart, lightTheme, type ChartSpec } from "../src/index";
 import { toBars } from "../src/charts/bar";
-import { matchThreshold, parseInterval, topN } from "../src/charts/util";
+import { bandLabelEvery, matchThreshold, parseInterval, stableColors, topN } from "../src/charts/util";
 import { toSeriesData } from "../src/charts/xy";
 
 const rows = Array.from({ length: 40 }, (_, i) => ({
@@ -228,5 +228,26 @@ describe("live updates", () => {
     const paths = [...el.querySelectorAll<SVGPathElement>(".d3s-plot path")];
     expect(paths.length).toBe(3);
     expect(paths.every((p) => (p.getAttribute("d") ?? "").startsWith("M"))).toBe(true);
+  });
+});
+
+describe("series colors", () => {
+  it("gives named series their fixed color, and the others the palette in name order", () => {
+    const theme = { ...lightTheme, color: { ...lightTheme.color, named: { Churn: "#dc3309" } } };
+    const color = stableColors()(theme, ["New", "Churn", "Expansion"]);
+    expect(color("Churn")).toBe("#dc3309");
+    // Churn takes no palette slot: Expansion and New are the first two.
+    expect(color("Expansion")).toBe(lightTheme.color.series[0]);
+    expect(color("New")).toBe(lightTheme.color.series[1]);
+    // A name only on the object's prototype is not a named color.
+    expect(color("constructor")).toBe(lightTheme.color.series[2]);
+  });
+});
+
+describe("band labels", () => {
+  it("keeps every label that fits, else every nth", () => {
+    expect(bandLabelEvery(["26-01", "26-02"], 80)).toBe(1);
+    expect(bandLabelEvery(["26-01", "26-02"], 30)).toBe(2);
+    expect(bandLabelEvery([], 0)).toBe(1);
   });
 });

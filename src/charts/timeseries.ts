@@ -8,6 +8,7 @@ import {
   createLegend,
   createTooltip,
   createXYLayers,
+  edgesOf,
   interactionsOf,
   motionMs,
   need,
@@ -15,6 +16,8 @@ import {
   renderMarkers,
   stableColors,
   animate,
+  xyLook,
+  xyMargin,
 } from "./util";
 
 interface TimeBar {
@@ -32,10 +35,11 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const fmt = d3.format(spec.format ?? ".3~s");
+  const look = xyLook(spec);
   let data: SeriesData = toSeriesData([], spec, xField, yField);
   let x = xScale(data, 1);
 
-  const frame = createFrame(el, spec.height ?? 240, () => draw(false));
+  const frame = createFrame(el, spec.height ?? 240, () => draw(false), xyMargin(spec));
   const layers = createXYLayers(frame);
   const legend = createLegend(el, () => draw(false));
   const tooltip = createTooltip(el);
@@ -84,7 +88,14 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
       .range([h, 0]);
     const color = colors(theme, data.keys);
     const ms = animated ? motionMs(theme) : 0;
-    renderAxes(layers, x as never, y as never, { w, h, fmt });
+    renderAxes(layers, x as never, y as never, {
+      w,
+      h,
+      fmt,
+      edges: look.edges ? edgesOf(data.xs) : undefined,
+      right: look.right,
+      none: look.none,
+    });
     pointer.resize(w, h);
 
     barsG

@@ -20,6 +20,8 @@ export interface Theme {
     negative: string;
     /** Categorical palette, used in order for series. */
     series: string[];
+    /** Fixed colors for series by name, such as `{ Churn: "#dc3309" }`. Other series take `series` in order. */
+    named?: Record<string, string>;
     /** Low and high ends of the scale for continuous values (heatmap, gauge). */
     sequential: [string, string];
   };

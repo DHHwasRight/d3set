@@ -43,6 +43,23 @@ export interface DashboardOptions {
    * so the swap from server markup to live charts does not animate.
    */
   hydrate?: boolean;
+  /**
+   * Width of the dashboard in CSS px, for a DOM that cannot measure it (server rendering). Each
+   * chart is drawn at the width its card gets in the grid at this width.
+   */
+  width?: number;
+}
+
+/**
+ * Width of a chart in a card spanning `span` columns of a `.d3s-grid` that is `width` wide:
+ * `repeat(auto-fill, minmax(min(100%, 320px), 1fr))` with `gap`, the card padding being `gap`
+ * too (the theme's `space.md`). The server renderer (Rust `chart_width`) sizes cards the same way.
+ */
+export function cardChartWidth(width: number, span: number, gap: number): number {
+  const columns = Math.max(1, Math.floor((width + gap) / (320 + gap)));
+  const card = (width - gap * (columns - 1)) / columns;
+  const s = Math.min(Math.max(1, span), columns);
+  return card * s + gap * (s - 1) - 2 * gap;
 }
 
 export interface Dashboard {
@@ -149,6 +166,12 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
     pauseButton.addEventListener("click", () => api.setPaused(!paused));
     controls.append(picker, pauseButton);
   }
+  // The initial window applies before the first draw: the first frame is already windowed.
+  if (timeField) {
+    const w = opts.timeWindow ?? "all";
+    windowMs = w === "all" ? undefined : parseInterval(w);
+    for (const b of windowButtons) b.setAttribute("aria-pressed", String(b.dataset.window === w));
+  }
   let statusEl: HTMLSpanElement | undefined;
   let sourceState = "idle";
   const showStatus = () => {
@@ -240,6 +263,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
     if (spec.span && spec.span > 1) card.dataset.span = String(spec.span);
     if (spec.title) card.append(el("h3", "", spec.title));
     const body = el("div");
+    if (opts.width) body.dataset.d3sWidth = String(cardChartWidth(opts.width, spec.span ?? 1, theme.space.md));
     card.append(body);
     grid.append(card);
     const first = opts.hydrate ? { ...theme, motion: 0 } : theme;
@@ -366,11 +390,6 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
     },
   };
 
-  if (timeField) {
-    const w = opts.timeWindow ?? "all";
-    windowMs = w === "all" ? undefined : parseInterval(w);
-    for (const b of windowButtons) b.setAttribute("aria-pressed", String(b.dataset.window === w));
-  }
   renderChips();
   return api;
 }

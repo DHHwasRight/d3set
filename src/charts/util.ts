@@ -8,12 +8,15 @@ export const margin = { top: 8, right: 12, bottom: 24, left: 44 };
 
 type Margin = typeof margin;
 
-/** An SVG that follows the width of its container. */
+/**
+ * An SVG that follows the width of its container. Where the container cannot be measured (a
+ * server-side DOM), `data-d3s-width` on it gives the width to draw at; else 400.
+ */
 export function createFrame(el: HTMLElement, height: number, onResize: () => void, m: Margin = margin) {
   el.classList.add("d3s-chart");
   el.style.height = `${height}px`;
   const svg = d3.select(el).append("svg").attr("height", height);
-  const size = { width: el.clientWidth || 400, height };
+  const size = { width: el.clientWidth || Number(el.dataset.d3sWidth) || 400, height };
   let ro: ResizeObserver | undefined;
   if (typeof ResizeObserver !== "undefined") {
     ro = new ResizeObserver((entries) => {
@@ -59,25 +62,99 @@ export function createXYLayers(frame: Frame) {
 type AnyScale = d3.AxisScale<d3.AxisDomain>;
 
 /**
+ * How often a category label shows on a horizontal band axis: 1 when the longest label fits its
+ * band, else the smallest n so that every nth label fits. A label is estimated at 6.5px a
+ * character plus 6px of space, the same estimate as the server renderer.
+ */
+export function bandLabelEvery(domain: string[], step: number): number {
+  const longest = d3.max(domain, (d) => String(d).length) ?? 0;
+  return step > 0 ? Math.max(1, Math.ceil((longest * 6.5 + 6) / step)) : 1;
+}
+
+/**
+ * The look options of an x/y chart (`spec.options`): `ticks: "edges"`, `valueAxis: "right"`,
+ * and `axes: "none"`.
+ */
+export function xyLook(spec: ChartSpec) {
+  return {
+    edges: spec.options?.ticks === "edges",
+    right: spec.options?.valueAxis === "right",
+    none: spec.options?.axes === "none",
+  };
+}
+
+/**
+ * The frame margin of an x/y chart. Without axes there is no margin. With the value axis on the
+ * right (and values on y), the space moves to the right.
+ */
+export function xyMargin(spec: ChartSpec, base: Margin = margin, valueOnX = false): Margin {
+  const look = xyLook(spec);
+  if (look.none) return { top: 0, right: 0, bottom: 0, left: 0 };
+  return look.right && !valueOnX ? { ...base, left: 12, right: 56 } : base;
+}
+
+/** The first and last of sorted values, for `ticks: "edges"`. One value gives one tick. */
+export function edgesOf<T>(values: T[]): T[] {
+  return values.length > 1 ? [values[0]!, values.at(-1)!] : values.slice();
+}
+
+/**
  * Draw the axes and the value grid lines.
  * `valueAxis` names the axis that carries values (and grid lines): `y` (default) or `x`.
+ * `edges` (`ticks: "edges"`): the category axis shows only these values, and the value axis only
+ * its domain ends, plus 0 when the domain crosses it. The bottom axis then anchors its first label
+ * at its start and its last label at its end. Numbers on a linear category axis show as `String(x)`.
+ * `right` (`valueAxis: "right"`): the value axis is on the right of the plot. No effect when the values are on x.
+ * `none` (`axes: "none"`): nothing is drawn; the layers stay empty.
  */
 export function renderAxes(
   layers: ReturnType<typeof createXYLayers>,
   x: AnyScale,
   y: AnyScale,
-  o: { w: number; h: number; fmt: (n: number) => string; valueAxis?: "x" | "y" },
+  o: {
+    w: number;
+    h: number;
+    fmt: (n: number) => string;
+    valueAxis?: "x" | "y";
+    edges?: d3.AxisDomain[];
+    right?: boolean;
+    none?: boolean;
+  },
 ) {
+  if (o.none) return;
   const valueOnX = o.valueAxis === "x";
+  const right = Boolean(o.right) && !valueOnX;
   const fmtTick = (v: d3.AxisDomain) => (typeof v === "number" ? o.fmt(v) : String(v));
   const xAxis = d3.axisBottom(x).tickSizeOuter(0);
-  const yAxis = d3.axisLeft(y).tickSizeOuter(0);
+  const yAxis = (right ? d3.axisRight(y) : d3.axisLeft(y)).tickSizeOuter(0);
   if (valueOnX) xAxis.ticks(Math.max(2, o.w / 80)).tickFormat(fmtTick);
   else if ("ticks" in x) xAxis.ticks(Math.max(2, o.w / 90));
+  else if ("step" in x) {
+    // Category labels that do not fit their band: keep every nth one, from the first.
+    const band = x as d3.ScaleBand<string>;
+    const every = bandLabelEvery(band.domain(), band.step());
+    if (every > 1) xAxis.tickValues(band.domain().filter((_, i) => i % every === 0));
+  }
   if (!valueOnX) yAxis.ticks(5).tickFormat(fmtTick);
 
+  // Edges: the value domain ends (and 0), and the given category values.
+  let valueTicks: number[] | undefined;
+  if (o.edges) {
+    const [lo, hi] = (valueOnX ? x : y).domain() as [number, number];
+    valueTicks = lo < 0 && hi > 0 ? [lo, 0, hi] : [lo, hi];
+    (valueOnX ? xAxis : yAxis).tickValues(valueTicks);
+    (valueOnX ? yAxis : xAxis).tickValues(o.edges);
+    if (!valueOnX && "ticks" in x && !(o.edges[0] instanceof Date)) xAxis.tickFormat(String);
+  }
+
   layers.xAxis.attr("transform", `translate(0,${o.h})`).call(xAxis);
+  if (right) layers.yAxis.attr("transform", `translate(${o.w},0)`);
   layers.yAxis.call(yAxis);
+  if (o.edges) {
+    const labels = layers.xAxis.selectAll<SVGTextElement, unknown>(".tick text");
+    const n = labels.size();
+    if (n > 1) labels.attr("text-anchor", (_, i) => (i === 0 ? "start" : i === n - 1 ? "end" : null));
+  }
   layers.grid.selectAll("*").remove();
   const grid = valueOnX
     ? d3
@@ -90,6 +167,7 @@ export function renderAxes(
         .ticks(5)
         .tickSize(-o.w)
         .tickFormat(() => "");
+  if (valueTicks) grid.tickValues(valueTicks);
   layers.grid.call(grid).call((s) => s.select(".domain").remove());
 }
 
@@ -194,16 +272,36 @@ export function motionMs(theme: Theme): number {
 export const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
 /**
+ * FNV-1a 32-bit over the UTF-16 code units of `s` (what `charCodeAt` gives), as 8 hex digits.
+ * The server renderer computes the same hash, so ids made from it match after hydration.
+ */
+export function fnv1a(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+/** Id of the area gradient of series number `i` (in name order): unique per chart spec and series. */
+export function gradientId(spec: ChartSpec, i: number): string {
+  const key = [spec.type, spec.title ?? "", spec.x ?? "", spec.y ?? "", spec.series ?? ""].join("|");
+  return `d3s-grad-${fnv1a(key)}-${i}`;
+}
+
+/**
  * Colors that stay with their key for the life of a chart. With live data the set and order of keys
  * change; a plain ordinal scale would then give a series a new color.
- * New keys get the next palette color, in name order within one call.
+ * New keys get the next palette color, in name order within one call. A key the theme names
+ * (`color.named`) always gets its fixed color and takes no palette slot.
  */
 export function stableColors() {
   const assigned = new Map<string, number>();
   return (theme: Theme, keys: string[]) => {
-    for (const k of [...keys].sort(byName)) if (!assigned.has(k)) assigned.set(k, assigned.size);
+    const named = theme.color.named ?? {};
+    const fixed = (k: string) => Object.prototype.hasOwnProperty.call(named, k);
+    for (const k of [...keys].sort(byName)) if (!fixed(k) && !assigned.has(k)) assigned.set(k, assigned.size);
     const palette = theme.color.series;
     return (k: string) => {
+      if (fixed(k)) return named[k]!;
       if (!assigned.has(k)) assigned.set(k, assigned.size);
       return palette[assigned.get(k)! % palette.length]!;
     };

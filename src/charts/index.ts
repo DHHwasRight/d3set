@@ -50,7 +50,13 @@ export const builtInCharts = {
   note: noteChart,
 };
 
-for (const [type, factory] of Object.entries(builtInCharts)) registerChart(type, factory);
+/**
+ * Register every built-in chart type. A call, not a side effect of importing this module: a
+ * bundler that trusts `sideEffects` may drop an import that only registers.
+ */
+export function registerBuiltInCharts(): void {
+  for (const [type, factory] of Object.entries(builtInCharts)) registerChart(type, factory);
+}
 
 export {
   changeChart,

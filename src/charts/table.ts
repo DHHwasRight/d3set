@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { ChartFactory, ColumnSpec } from "./types";
-import { aggregate, interactionsOf, matchThreshold, selectOnClick, thresholdColor } from "./util";
+import { aggregate, byName, interactionsOf, matchThreshold, selectOnClick, stableColors, thresholdColor } from "./util";
 
 type Sort = { field: string; dir: "ascending" | "descending" } | undefined;
 
@@ -12,6 +12,8 @@ type Sort = { field: string; dir: "ascending" | "descending" } | undefined;
  * Column `thresholds` (or spec `thresholds` for the group metric) color numbers.
  * Click a group line (or a text cell in raw mode) to cross-filter the dashboard.
  * `limit` caps the number of lines (default 100). Click a header to sort.
+ * `options.swatch: true` (group mode): the first cell of a line starts with a dot in the color of its
+ * `x` value, assigned like series colors over all `x` values of the table.
  */
 export const tableChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
@@ -22,13 +24,18 @@ export const tableChart: ChartFactory = (el, spec, ctx) => {
   wrap.className = "d3s-table-wrap";
   const table = document.createElement("table");
   table.className = "d3s-table";
-  const thead = table.createTHead();
-  const tbody = table.createTBody();
+  // `createElement` rather than `createTHead`/`createTBody`: any DOM has it, server-side ones too.
+  const thead = document.createElement("thead");
+  const tbody = document.createElement("tbody");
+  table.append(thead, tbody);
   wrap.append(table);
   el.append(wrap);
 
   const limit = spec.limit ?? 100;
   const grouped = Boolean(spec.x && spec.aggregate);
+  const pivot = grouped && typeof spec.options?.pivot === "string" ? spec.options.pivot : undefined;
+  const swatch = grouped && spec.options?.swatch === true;
+  const colors = stableColors();
   let rows: Row[] = [];
   let sort: Sort;
 
@@ -37,6 +44,28 @@ export const tableChart: ChartFactory = (el, spec, ctx) => {
       const x = spec.x!;
       const y = spec.y ?? x;
       const keys = [x, ...(spec.series ? [spec.series] : [])];
+      if (pivot) {
+        const values = [...new Set(input.map((r) => String(r[pivot])))].sort(byName);
+        const cells = d3.rollups(
+          input,
+          (v) =>
+            aggregate(
+              v.map((r) => Number(r[y])),
+              spec.aggregate!,
+            ),
+          (r) => keys.map((k) => String(r[k])).join("\u0000"),
+          (r) => String(r[pivot]),
+        );
+        const lines = cells.map(([key, inner]) => {
+          const parts = key.split("\u0000");
+          return { ...Object.fromEntries(keys.map((k, i) => [k, parts[i]])), ...Object.fromEntries(inner) } as Row;
+        });
+        const columns = spec.columns ?? [
+          ...keys.map((field) => ({ field })),
+          ...values.map((field) => ({ field, format: spec.format, thresholds: spec.thresholds })),
+        ];
+        return { columns, lines };
+      }
       const groups = d3.rollups(
         input,
         (v) =>
@@ -77,6 +106,7 @@ export const tableChart: ChartFactory = (el, spec, ctx) => {
 
     const formatters = columns.map((c) => (c.format ? d3.format(c.format) : undefined));
     const isNumeric = columns.map((c) => lines.some((r) => typeof r[c.field] === "number"));
+    const color = swatch ? colors(theme, [...new Set(lines.map((r) => String(r[spec.x!])))]) : undefined;
 
     const headRow = document.createElement("tr");
     columns.forEach((c, i) => {
@@ -115,6 +145,12 @@ export const tableChart: ChartFactory = (el, spec, ctx) => {
           if (!grouped && !isNumeric[i] && v !== undefined && v !== null) {
             td.classList.add("d3s-cell-link");
             selectOnClick(td, ix, c.field, String(v));
+          }
+          if (color && i === 0) {
+            const dot = document.createElement("i");
+            dot.className = "d3s-swatch";
+            dot.style.background = color(String(r[spec.x!]));
+            td.prepend(dot);
           }
           tr.append(td);
         });

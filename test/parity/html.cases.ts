@@ -50,6 +50,79 @@ export const cases: Cases = {
   },
   "table group count no y": { spec: { type: "table", x: "host", aggregate: "count" } },
   "table empty": { spec: { type: "table" }, rows: [] },
+  "table group swatch": {
+    spec: { type: "table", x: "region", y: "amount", aggregate: "sum", format: ",.0f", options: { swatch: true } },
+  },
+  "table group series swatch limit": {
+    spec: {
+      type: "table",
+      x: "host",
+      series: "product",
+      y: "seats",
+      aggregate: "max",
+      limit: 4,
+      options: { swatch: true },
+    },
+  },
+  "table pivot swatch": {
+    spec: { type: "table", x: "product", y: "amount", aggregate: "sum", options: { pivot: "region", swatch: true } },
+  },
+  "table raw swatch ignored": { spec: { type: "table", limit: 3, options: { swatch: true } } },
+  "table swatch empty": {
+    spec: { type: "table", x: "host", y: "amount", aggregate: "sum", options: { swatch: true } },
+    rows: [],
+  },
+
+  // kpi value "last"
+  "kpi value last": { spec: { type: "kpi", x: "at", y: "amount", interval: "5m", options: { value: "last" } } },
+  "kpi value last avg": {
+    spec: {
+      type: "kpi",
+      x: "at",
+      y: "latency",
+      aggregate: "avg",
+      interval: "10m",
+      thresholds: [{ op: ">", value: 400, level: "warning" }],
+      options: { value: "last" },
+    },
+  },
+  "kpi value last no x": { spec: { type: "kpi", y: "amount", options: { value: "last" } } },
+  "kpi period sum": { spec: { type: "kpi", x: "at", y: "amount", interval: "10m", options: { period: 3 } } },
+  "kpi period count": {
+    spec: { type: "kpi", x: "at", y: "amount", aggregate: "count", interval: "5m", options: { period: 4 } },
+  },
+  "kpi period avg": {
+    spec: {
+      type: "kpi",
+      x: "at",
+      y: "latency",
+      aggregate: "avg",
+      interval: "5m",
+      format: ",.1f",
+      options: { period: 2 },
+    },
+  },
+  "kpi period last": {
+    spec: { type: "kpi", x: "at", y: "amount", interval: "10m", options: { period: 2, value: "last" } },
+  },
+  "kpi period short before": {
+    spec: { type: "kpi", x: "t", y: "v", options: { period: 3 } },
+    rows: [1, 2, 3, 4].map((i) => ({ t: at(i), v: i * 10 })),
+  },
+  "kpi period nothing before": {
+    spec: { type: "kpi", x: "t", y: "v", options: { period: 3 } },
+    rows: [1, 2].map((i) => ({ t: at(i), v: i * 10 })),
+  },
+  "kpi period last missing": {
+    spec: { type: "kpi", x: "t", y: "v", options: { period: 2, value: "last" } },
+    rows: [1, 2].map((i) => ({ t: at(i), v: i * 10 })),
+  },
+  "kpi period invalid": {
+    spec: { type: "kpi", x: "t", y: "v", options: { period: 1.5 } },
+    rows: [1, 2].map((i) => ({ t: at(i), v: i })),
+  },
+  "kpi period empty": { spec: { type: "kpi", x: "at", y: "amount", options: { period: 2 } }, rows: [] },
+  "kpi value last empty": { spec: { type: "kpi", x: "at", y: "amount", options: { value: "last" } }, rows: [] },
   "table group empty": { spec: { type: "table", x: "host", y: "amount", aggregate: "sum" }, rows: [] },
 
   // toplist

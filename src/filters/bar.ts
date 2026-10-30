@@ -1,6 +1,15 @@
 import { distinctValues, type FilterDef, type FilterStore } from "./filters";
 import type { Row } from "../data/types";
 
+/** `new Option(text, value, false, selected)`, built from `document` so any DOM can run it. */
+function option(text: string, value: string, selected: boolean): HTMLOptionElement {
+  const o = document.createElement("option");
+  o.textContent = text;
+  o.value = value;
+  o.selected = selected;
+  return o;
+}
+
 /**
  * Render a filter bar in `el`. Select options with no fixed list come from
  * `rows()` and refresh when you call `refresh()`.
@@ -44,8 +53,8 @@ export function renderFilterBar(
           if (next === signature) return;
           signature = next;
           sel.replaceChildren(
-            ...(def.multiple ? [] : [new Option("All", "")]),
-            ...all.map((o) => new Option(o, o, false, chosen.has(o))),
+            ...(def.multiple ? [] : [option("All", "", false)]),
+            ...all.map((o) => option(o, o, chosen.has(o))),
           );
         };
         fill();

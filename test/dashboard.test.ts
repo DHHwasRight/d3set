@@ -28,4 +28,22 @@ describe("createDashboard", () => {
     dash.destroy();
     expect(el.children).toHaveLength(0);
   });
+
+  it("applies the initial time window before the first draw", () => {
+    const el = document.createElement("div");
+    const now = Date.now();
+    const src = staticSource([
+      { at: new Date(now - 60 * 60_000).toISOString(), amount: 100 },
+      { at: new Date(now - 60_000).toISOString(), amount: 7 },
+    ]);
+    const dash = createDashboard(el, {
+      source: src,
+      timeField: "at",
+      timeWindow: "15m",
+      charts: [{ type: "kpi", title: "Total", y: "amount" }],
+    });
+    expect(el.querySelector(".d3s-kpi")!.textContent).toBe("7");
+    expect(el.querySelector('[data-window="15m"]')!.getAttribute("aria-pressed")).toBe("true");
+    dash.destroy();
+  });
 });

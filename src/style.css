@@ -539,3 +539,13 @@
 .d3s-filter select[multiple] {
   height: 82px;
 }
+
+/* Table `swatch`: a dot in the color of the line's x value. */
+.d3s-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -1px;
+}

@@ -91,7 +91,30 @@ export interface ChartSpec {
   /** `pie`: inner radius as a ratio of the outer radius (0 to 0.9). `donut` uses 0.6. */
   innerRadius?: number;
 
-  /** Extra options for custom chart types. */
+  /**
+   * Extra options. Custom chart types read their own keys. Built-in keys:
+   * - `where: "field=value"` (every type): keep only the rows where `field` is `value`.
+   * - `ticks: "edges"` (line, area, bar, timeseries): the category or time axis labels only the
+   *   first and last x value of the data (first label anchored at its start, last at its end); the
+   *   value axis labels only its domain ends, plus 0 when the domain crosses it. Grid lines follow.
+   * - `valueAxis: "right"` (line, area, vertical bar, timeseries): the value axis is on the right;
+   *   margins become left 12, right 56.
+   * - `curve: "linear"` (line, area, timeseries line and area): straight segments, not `curveMonotoneX`.
+   * - `gradient: true` (area, timeseries area): each area is filled with a vertical gradient of its
+   *   color (opacity 0.4 at the top, 0 at 60%) under a 2px line.
+   * - `value: "last"` (kpi with `x`): the big number is the value of the last x point.
+   * - `period: N` (kpi with `x`, a positive integer): the period is the last N trend points. The big
+   *   number combines their values with the aggregate (`count` adds the counts), and the delta compares
+   *   it with the N points before (as many as exist; none: no delta). With `value: "last"`: the last
+   *   point against the point N places before. The delta reads "vs previous period".
+   * - `categories: "a|b|c"` (bar): exactly these categories, in this order. A category with no rows
+   *   keeps its band; rows of other categories are left out; `limit` is ignored.
+   * - `axes: "none"` (bar, line, area, timeseries): no axes, no grid lines, and no margin; the marks
+   *   fill the frame.
+   * - `pivot: "field"` (table in group mode): one column per value of `field`.
+   * - `swatch: true` (table in group mode): each line starts with a dot in the color of its `x` value.
+   * - `sort: true` (funnel), `ascending: true` (toplist).
+   */
   options?: Record<string, unknown>;
 }
 

@@ -1,11 +1,11 @@
-import { getChart } from "./charts/registry";
+import { createChart } from "./chart";
 import type { Chart, ChartSpec } from "./charts/types";
 import { createDashboard, type Dashboard } from "./dashboard";
 import { sseSource } from "./data/sse";
 import { staticSource } from "./data/static";
 import type { DataSource, MergeMode, Row } from "./data/types";
 import type { FilterDef } from "./filters/filters";
-import { applyTheme, darkTheme, lightTheme, type Theme } from "./theme/theme";
+import { darkTheme, lightTheme, type Theme } from "./theme/theme";
 
 /** What a server writes into `<script type="application/json" class="d3s-payload">`. */
 interface Payload {
@@ -49,6 +49,28 @@ function readPayload<T>(el: Element): T | undefined {
     console.warn("d3set: hydrate: cannot read the payload, element skipped.", err);
     return undefined;
   }
+}
+
+/** The chart types of the payloads under `root` that `hydrate` would read. */
+export function payloadTypes(root: ParentNode = document): string[] {
+  const types = new Set<string>();
+  for (const el of root.querySelectorAll("[data-d3s-dashboard]")) {
+    for (const spec of readPayload<DashboardPayload>(el)?.charts ?? []) types.add(spec.type);
+  }
+  for (const el of root.querySelectorAll("[data-d3s-chart]")) {
+    const type = readPayload<ChartPayload>(el)?.spec.type;
+    if (type) types.add(type);
+  }
+  if (root instanceof Element) {
+    // `root` itself may be a payload element.
+    if (root.matches("[data-d3s-dashboard]"))
+      readPayload<DashboardPayload>(root)?.charts.forEach((s) => types.add(s.type));
+    if (root.matches("[data-d3s-chart]")) {
+      const type = readPayload<ChartPayload>(root)?.spec.type;
+      if (type) types.add(type);
+    }
+  }
+  return [...types];
 }
 
 function themeOf(p: Payload, opts: HydrateOptions): Theme {
@@ -102,16 +124,9 @@ export function hydrate(root: ParentNode = document, opts: HydrateOptions = {}):
   for (const el of root.querySelectorAll<HTMLElement>("[data-d3s-chart]")) {
     const p = readPayload<ChartPayload>(el);
     if (!p) continue;
-    const theme = themeOf(p, opts);
-    const body = document.createElement("div");
-    el.replaceChildren(body);
-    applyTheme(el, theme);
-    const chart = getChart(p.spec.type)(body, p.spec, { theme: { ...theme, motion: 0 } });
-    const source = sourceOf(p);
-    sources.push(source);
-    source.subscribe((rows) => chart.update(rows));
-    chart.setTheme(theme);
-    charts.push(chart);
+    const mounted = createChart(el, { spec: p.spec, source: sourceOf(p), theme: themeOf(p, opts), hydrate: true });
+    sources.push(mounted.source);
+    charts.push(mounted.chart);
     delete el.dataset.d3sChart;
   }
 

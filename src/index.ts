@@ -1,31 +1,11 @@
 import "./style.css";
 
-export { createDashboard, type Dashboard, type DashboardOptions } from "./dashboard";
-export { hydrate, type ChartPayload, type DashboardPayload, type HydrateOptions, type Hydrated } from "./hydrate";
+// Everything, with every built-in chart type registered. To ship only some chart types, import
+// `./core` and register them, or load them on demand with `./lazy`.
+export * from "./core";
+import { registerBuiltInCharts } from "./charts/index";
 
-export { applyTheme, createTheme, darkTheme, lightTheme, themeToCssVars, type Theme } from "./theme/theme";
-
-export { sseSource, buildUrl, type SseSourceOptions } from "./data/sse";
-export { staticSource } from "./data/static";
-export { mergeRows, type MergeOptions } from "./data/merge";
-export type { DataSource, Envelope, MergeMode, Row, SourceState } from "./data/types";
-
-export {
-  applyFilters,
-  dateRange,
-  distinctValues,
-  FilterStore,
-  filtersToParams,
-  multiSelect,
-  range,
-  search,
-  select,
-  type FilterDef,
-  type FilterState,
-  type FilterValue,
-} from "./filters/filters";
-export { renderFilterBar } from "./filters/bar";
-
+registerBuiltInCharts();
 export {
   changeChart,
   hostmapChart,
@@ -41,6 +21,7 @@ export {
   barChart,
   boxplotChart,
   builtInCharts,
+  registerBuiltInCharts,
   donutChart,
   funnelChart,
   gaugeChart,
@@ -55,15 +36,3 @@ export {
   tableChart,
   treemapChart,
 } from "./charts/index";
-export type {
-  Aggregate,
-  Chart,
-  ChartContext,
-  ChartFactory,
-  ChartSpec,
-  ColumnSpec,
-  Level,
-  Threshold,
-} from "./charts/types";
-export { isDimmed, noInteractions, type Interactions, type RangeValue } from "./charts/interactions";
-export { bindSelect, createLegend, dimOpacity, rangeBrush } from "./charts/util";
