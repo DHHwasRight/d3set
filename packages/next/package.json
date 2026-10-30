@@ -1,0 +1,42 @@
+{
+  "name": "@d3set/next",
+  "version": "0.1.0",
+  "description": "d3set for Next.js (App Router): client and server components, an SSE route helper, and the next.config setup.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@d3set/react": "^0.1.0",
+    "d3set": "^0.1.0",
+    "next": "^15.0.0 || ^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@d3set/react": "file:../react",
+    "d3set": "file:../.."
+  },
+  "dependencies": {
+    "server-only": "^0.0.1"
+  }
+}

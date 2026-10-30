@@ -12,13 +12,28 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/d3set.js"
     },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./lazy": {
+      "types": "./dist/lazy.d.ts",
+      "import": "./dist/lazy.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
     "./style.css": "./dist/d3set.css"
   },
   "files": [
     "dist"
   ],
   "sideEffects": [
-    "*.css"
+    "*.css",
+    "./dist/d3set.js",
+    "./src/index.ts",
+    "./src/charts/index.ts"
   ],
   "scripts": {
     "dev": "vite examples",
@@ -28,18 +43,32 @@
     "test": "vitest run",
     "format": "prettier --write src test examples",
     "build:browser": "vite build -c vite.browser.config.ts",
-    "gallery:assets": "npm run build:browser && mkdir -p rust/gallery/assets/js rust/gallery/assets/css && cp dist-browser/d3set.js rust/gallery/assets/js/d3set.js && cp dist-browser/d3set.css rust/gallery/assets/css/d3set.css"
+    "e2e": "playwright test"
   },
   "dependencies": {
-    "d3": "^7.9.0"
+    "d3": "^7.9.0",
+    "linkedom": "^0.18.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/d3": "^7.4.3",
     "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^30.1.3",
+    "next": "^16.4.3",
     "prettier": "^3.9.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
-  }
+  },
+  "workspaces": [
+    "packages/*",
+    "examples/next",
+    "galleries/*"
+  ]
 }

@@ -4,8 +4,8 @@ rust = "1.98"
 node = "26"
 
 [tasks.gallery]
-description = "Build the browser bundle into the gallery, then serve it"
-run = ["npm run gallery:assets", "touch rust/gallery/src/assets.rs", "cargo run -p gallery"]
+description = "Serve the gallery; cargo builds its JS and CSS (DEV=1 keeps them unminified)"
+run = ["cargo run -p gallery"]
 
 [tasks.parity]
 description = "Compare the Rust and TypeScript renders of every chart"
