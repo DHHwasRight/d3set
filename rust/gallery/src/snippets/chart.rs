@@ -25,7 +25,14 @@ pub fn render(
 /// The server-sent events of `feed`. `since` is the time of the newest row the page embeds:
 /// the stream sends only what the page does not have. Rows upsert by `id`, so a reconnect that
 /// replays rows does not count them twice.
+///
+/// A static site has no server to stream from: the chart polls the feed's recorded timeline,
+/// a JSON file next to the pages.
 pub fn stream(feed: Feed, rows: &[Row], max_rows: usize) -> Stream {
+    if crate::site::is_static() {
+        let url = format!("{}/data/{}.json", crate::site::base(), feed.name());
+        return Stream::new(url).max_rows(max_rows).key("id").poll();
+    }
     let url = match newest(rows) {
         Some(t) => format!("/events/{}?since={t}", feed.name()),
         None => format!("/events/{}", feed.name()),

@@ -26,7 +26,9 @@ if (NativeEventSource) {
 
 // Fragments live at the page's own URL; the server picks the tree to send from the DP-Partial
 // header. dp-swap starts itself on DOMContentLoaded, which a module script always runs before,
-// so configuring here is in time and no explicit start is needed.
+// so configuring here is in time and no explicit start is needed. On a static site the page's
+// `<meta name="dp-config">` adds `partialDir` and `base`: dp-swap reads it when it starts, and a
+// partial directory wins over the header.
 dpswap.configure({ fragmentMode: "header" });
 
 // Each hydration, with what it hydrated. The handle d3set returns does not expose its elements,

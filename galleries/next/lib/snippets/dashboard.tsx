@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function GalleryDashboard({ dashboard, width }: Props) {
-  const { charts, filters, filterMode, timeField, timeWindow, rows, theme } = dashboard;
+  const { charts, filters, filterMode, timeField, timeWindow, rows, theme, stream } = dashboard;
   return (
     <ServerDashboard
       charts={charts}
@@ -18,8 +18,9 @@ export function GalleryDashboard({ dashboard, width }: Props) {
       filterMode={filterMode}
       timeField={timeField}
       timeWindow={timeWindow}
-      // Fixed rows: the gallery has no live data. A live page passes `stream="/api/events"`.
       rows={rows}
+      // On GitHub Pages, a JSON timeline polled with `transport: "poll"`. In dev, none: fixed rows.
+      stream={stream}
       theme={theme as Theme}
       width={width}
     />

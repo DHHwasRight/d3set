@@ -244,6 +244,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "brocanth-static"
+version = "0.1.0"
+dependencies = [
+ "brocanth",
+ "brocanth-server",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -812,6 +820,7 @@ dependencies = [
  "brocanth-bundle",
  "brocanth-pages",
  "brocanth-server",
+ "brocanth-static",
  "d3set-ssr",
  "giallo",
  "jt",

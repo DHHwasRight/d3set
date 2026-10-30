@@ -12,12 +12,20 @@ pub struct Snippet {
 
 macro_rules! snippet {
     ($path:literal, $lang:literal, $file:literal) => {
-        Snippet { path: $path, lang: $lang, code: include_str!($file) }
+        Snippet {
+            path: $path,
+            lang: $lang,
+            code: include_str!($file),
+        }
     };
 }
 
 pub const CHART: Snippet = snippet!("rust/gallery/src/snippets/chart.rs", "rust", "chart.rs");
-pub const HYDRATE: Snippet = snippet!("rust/gallery/assets/js/_src/hydrate.js", "js", "../../assets/js/_src/hydrate.js");
+pub const HYDRATE: Snippet = snippet!(
+    "rust/gallery/assets/js/_src/hydrate.js",
+    "js",
+    "../../assets/js/_src/hydrate.js"
+);
 pub const FEEDS: Snippet = snippet!("rust/gallery/src/feeds.jt", "jt", "../feeds.jt");
 
 /// What the summary of a code block calls a grammar.

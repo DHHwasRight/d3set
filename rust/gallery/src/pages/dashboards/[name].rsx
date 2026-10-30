@@ -1,3 +1,5 @@
+use crate::site::is_static;
+
 pub fn DashboardPage(title: &str, lead: &str, markup: &str, js: bool, path: &str, rows: usize) -> Element {
     <article class="page page-wide">
         <div class="eyebrow">Dashboards</div>
@@ -6,8 +8,10 @@ pub fn DashboardPage(title: &str, lead: &str, markup: &str, js: bool, path: &str
         <div class="callout">
             if js {
                 <span class="badge badge-live">Live</span>
-                {rows} rows<span data-snippet="rendered">, rendered on the server</span>. Click a bar, slice, row, or tile to cross-filter; drag on a time chart to zoom.
-                <a href={off_href(path)} dp-boost="false">View without JavaScript</a>
+                {rows} rows<span data-snippet="rendered">{rendered()}</span>. Click a bar, slice, row, or tile to cross-filter; drag on a time chart to zoom.
+                if !is_static() {
+                    <a href={off_href(path)} dp-boost="false">View without JavaScript</a>
+                }
             } else {
                 <span class="badge">Static</span>
                 What the server sends: {rows} rows drawn as SVG and HTML, no script.
@@ -20,4 +24,8 @@ pub fn DashboardPage(title: &str, lead: &str, markup: &str, js: bool, path: &str
 
 fn off_href(path: &str) -> String {
     format!("{path}?js=off")
+}
+
+fn rendered() -> &'static str {
+    if is_static() { ", rendered ahead of time" } else { ", rendered on the server" }
 }

@@ -9,10 +9,12 @@
     "./docs": "./src/docs.ts",
     "./libraries": "./src/libraries.ts",
     "./highlight": "./src/highlight.ts",
-    "./vite": "./src/vite.ts"
+    "./vite": "./src/vite.ts",
+    "./site": "./src/site.ts"
   },
   "scripts": {
-    "export": "node scripts/export.mjs"
+    "export": "node scripts/export.mjs",
+    "pages": "node scripts/pages.mjs"
   },
   "dependencies": {
     "shiki": "^4.5.0"

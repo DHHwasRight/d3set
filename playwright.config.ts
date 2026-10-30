@@ -6,11 +6,17 @@ import { defineConfig } from "@playwright/test";
 const PORT = Number(process.env.GALLERY_PORT ?? 3100);
 // A second server with the swap ring on (`GALLERY_SWAP_RING=1`), for the tests tagged `@ring`.
 const RING_PORT = Number(process.env.GALLERY_RING_PORT ?? 3110);
+// The gallery as a static site (`GALLERY_STATIC=1`): streams poll the recorded timelines and
+// dp-swap reads `partials/{depth}{path}`, which `serve` answers like a static host. `static.spec.ts`.
+const STATIC_PORT = Number(process.env.GALLERY_STATIC_PORT ?? 3120);
 // The Next.js example (examples/next), built then served, for `next.spec.ts`.
 const NEXT_PORT = 3200;
 // Conformity (`D3SET_CONFORMITY=1`): the Rust gallery with a fixed clock, and the framework
 // galleries drawing the pages exported from it (galleries/).
 const CONFORMITY = process.env.D3SET_CONFORMITY === "1";
+// The GitHub Pages build (`npm run pages:build`), served on its own port: `D3SET_PAGES=1`.
+const PAGES = process.env.D3SET_PAGES === "1";
+const PAGES_PORT = 4010;
 const REFERENCE_PORT = Number(process.env.GALLERY_REFERENCE_PORT ?? 3140);
 // `D3SET_GALLERIES=vanilla,react` limits the run to some galleries.
 const GALLERIES = [
@@ -44,7 +50,7 @@ export default defineConfig({
     {
       name: "default",
       grepInvert: /@ring/,
-      testIgnore: /(next|conformity)\.spec\.ts/,
+      testIgnore: /(next|conformity|static|pages)\.spec\.ts/,
       use: { baseURL: `http://127.0.0.1:${PORT}` },
     },
     {
@@ -54,10 +60,18 @@ export default defineConfig({
       use: { baseURL: `http://127.0.0.1:${RING_PORT}` },
     },
     {
+      name: "static",
+      testMatch: /static\.spec\.ts/,
+      use: { baseURL: `http://127.0.0.1:${STATIC_PORT}` },
+    },
+    {
       name: "next",
       testMatch: /next\.spec\.ts/,
       use: { baseURL: `http://127.0.0.1:${NEXT_PORT}` },
     },
+    ...(PAGES
+      ? [{ name: "pages", testMatch: /pages\.spec\.ts/, use: { baseURL: `http://localhost:${PAGES_PORT}` } }]
+      : []),
     ...(CONFORMITY
       ? GALLERIES.map((g) => ({
           name: `conformity-${g.name}`,
@@ -67,8 +81,25 @@ export default defineConfig({
       : []),
   ],
   webServer: [
+    ...(PAGES
+      ? [
+          {
+            // The GitHub Pages build, served like GitHub serves it, for this address.
+            command: `node scripts/pages/build.mjs --out dist-pages-e2e && node scripts/pages/serve.mjs --no-watch`,
+            env: {
+              PAGES_URL: `http://localhost:${PAGES_PORT}/d3set`,
+              PAGES_OUT: "dist-pages-e2e",
+              PORT: String(PAGES_PORT),
+            },
+            url: `http://localhost:${PAGES_PORT}/d3set/`,
+            reuseExistingServer: false,
+            timeout: 600_000,
+          },
+        ]
+      : []),
     server(PORT),
     server(RING_PORT, { GALLERY_SWAP_RING: "1" }),
+    server(STATIC_PORT, { GALLERY_STATIC: "1" }),
     {
       command: "npm run build -w examples/next && npm run start -w examples/next",
       url: `http://127.0.0.1:${NEXT_PORT}/`,

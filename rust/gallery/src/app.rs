@@ -145,6 +145,33 @@ fn holding(request: &brocanth_server::Request) -> u32 {
     }
 }
 
+/// On a static site, `serve` is the preview of what a static host serves: the paths carry the
+/// base (`/d3set/charts/bar`), and dp-swap asks for `partials/{depth}{path}` instead of sending
+/// `DP-Partial`. Both become the request the pages answer: `/charts/bar`, and the header.
+fn as_static_host(request: &mut brocanth_server::Request) {
+    let base = crate::site::base();
+    if !base.is_empty() {
+        if request.path == base {
+            request.path = "/".to_string();
+        } else if let Some(rest) = request
+            .path
+            .strip_prefix(base)
+            .filter(|r| r.starts_with('/'))
+        {
+            request.path = rest.to_string();
+        }
+    }
+    let Some(rest) = request.path.strip_prefix("/partials/") else {
+        return;
+    };
+    let (depth, path) = rest.split_once('/').map_or((rest, ""), |(d, p)| (d, p));
+    if depth.parse::<u32>().is_ok() {
+        let (depth, path) = (depth.to_string(), format!("/{path}"));
+        request.path = path;
+        request.set_header("dp-partial", &depth);
+    }
+}
+
 /// Serves until the process is stopped.
 ///
 /// Synchronous on the outside because the command that calls it is, and
@@ -157,8 +184,17 @@ pub fn serve(addr: &str) -> Result<(), String> {
     if *crate::site::SWAP_RING {
         eprintln!("{APP}: swap ring on");
     }
+    if crate::site::is_static() {
+        eprintln!(
+            "{APP}: static site (GALLERY_STATIC), base `{}`, streams poll /data/{{feed}}.json",
+            crate::site::base()
+        );
+    }
     if let Some(t) = *crate::data::FROZEN {
-        eprintln!("{APP}: clock fixed at {} (GALLERY_NOW), live feeds paused", d3set_ssr::time::iso(t));
+        eprintln!(
+            "{APP}: clock fixed at {}, live feeds paused",
+            d3set_ssr::time::iso(t)
+        );
     }
     // `GALLERY_LIBRARIES`: a bad value stops here, before the server binds.
     if let Err(message) = &*crate::libraries::BASES {
@@ -180,7 +216,10 @@ pub fn serve(addr: &str) -> Result<(), String> {
         eprintln!("{APP}: listening on http://{bound}");
 
         server
-            .run(move |request| {
+            .run(move |mut request| {
+                if crate::site::is_static() {
+                    as_static_host(&mut request);
+                }
                 // Dispatch is synchronous and runs here, outside the
                 // future, so what crosses the await is a finished
                 // response and nothing borrowed.

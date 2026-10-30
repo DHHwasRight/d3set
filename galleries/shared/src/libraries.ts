@@ -5,6 +5,7 @@
 //   GALLERY_LIBRARIES=vanilla=https://…,rsx=https://…   (partial: the others keep their default)
 
 import { isElement, type ElementNode, type Node } from "./fixture.ts";
+import { stripBase } from "./site.ts";
 
 export type Library = "vanilla" | "rsx" | "react" | "next";
 
@@ -55,15 +56,15 @@ function link(n: Node, own: Library, bases: Record<Library, string>, path: strin
 
 /**
  * Keep the switch's links on the page shown now (a hash or query changed since the page was
- * built): each click points the link at its gallery's base and the current path. Returns the
- * listener's removal.
+ * built): each click points the link at its gallery's base and the current path, without this
+ * gallery's own path prefix (`own`, "" in dev). Returns the listener's removal.
  */
-export function followLibrarySwitch(bases: Record<Library, string>): () => void {
+export function followLibrarySwitch(bases: Record<Library, string>, own = ""): () => void {
   const onClick = (event: Event) => {
     const a = (event.target as Element | null)?.closest?.("#library-switch a[data-library]");
     if (!(a instanceof HTMLAnchorElement)) return;
     const base = bases[a.dataset.library as Library];
-    if (base) a.href = `${base}${location.pathname}${location.search}`;
+    if (base) a.href = `${base}${stripBase(location.pathname, own)}${location.search}`;
   };
   // Capture: the link is right before the gallery's own link handling reads it.
   document.addEventListener("click", onClick, true);

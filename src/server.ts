@@ -15,13 +15,16 @@ import { createChart } from "./chart";
 import type { ChartSpec } from "./charts/types";
 import { createDashboard } from "./dashboard";
 import { staticSource } from "./data/static";
-import type { MergeMode, Row } from "./data/types";
+import type { Row } from "./data/types";
 import type { FilterDef } from "./filters/filters";
-import type { ChartPayload, DashboardPayload } from "./hydrate";
+import type { ChartPayload, DashboardPayload, StreamOption } from "./hydrate";
 import { lightTheme, type Theme } from "./theme/theme";
 
-/** A live source for the hydrated page: server-sent events at `url`. */
-export type StreamOption = string | { url: string; maxRows?: number; mode?: MergeMode; key?: string };
+/**
+ * A live source for the hydrated page: server-sent events at `url`, or with `transport: "poll"` a
+ * JSON file fetched again and again.
+ */
+export type { StreamOption };
 
 export interface RenderChartOptions {
   spec: ChartSpec;

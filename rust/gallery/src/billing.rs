@@ -49,20 +49,87 @@ struct Metric {
 }
 
 const METRICS: [Metric; 5] = [
-    Metric { name: "API calls", code: "api_calls", base: 180_000.0, price: 0.0004 },
-    Metric { name: "Storage (GB)", code: "storage_gb", base: 420.0, price: 0.08 },
-    Metric { name: "Input tokens", code: "tokens_input", base: 9_000_000.0, price: 0.000_003 },
-    Metric { name: "Output tokens", code: "tokens_output", base: 2_400_000.0, price: 0.000_012 },
-    Metric { name: "Seats", code: "seats", base: 14.0, price: 9.0 },
+    Metric {
+        name: "API calls",
+        code: "api_calls",
+        base: 180_000.0,
+        price: 0.0004,
+    },
+    Metric {
+        name: "Storage (GB)",
+        code: "storage_gb",
+        base: 420.0,
+        price: 0.08,
+    },
+    Metric {
+        name: "Input tokens",
+        code: "tokens_input",
+        base: 9_000_000.0,
+        price: 0.000_003,
+    },
+    Metric {
+        name: "Output tokens",
+        code: "tokens_output",
+        base: 2_400_000.0,
+        price: 0.000_012,
+    },
+    Metric {
+        name: "Seats",
+        code: "seats",
+        base: 14.0,
+        price: 9.0,
+    },
 ];
 
 const PLANS: [Plan; 6] = [
-    Plan { name: "Starter", code: "starter", amount: 49.0, interval: "monthly", metrics: &[0], commitment: 0.0 },
-    Plan { name: "Growth", code: "growth", amount: 199.0, interval: "monthly", metrics: &[0, 1], commitment: 0.0 },
-    Plan { name: "Scale", code: "scale", amount: 799.0, interval: "monthly", metrics: &[0, 1, 4], commitment: 0.0 },
-    Plan { name: "Enterprise", code: "enterprise", amount: 2400.0, interval: "yearly", metrics: &[0, 1, 4], commitment: 600.0 },
-    Plan { name: "AI Tokens", code: "ai_tokens", amount: 0.0, interval: "monthly", metrics: &[2, 3], commitment: 0.0 },
-    Plan { name: "Agent SDK", code: "agent_sdk", amount: 99.0, interval: "monthly", metrics: &[0, 2, 3], commitment: 0.0 },
+    Plan {
+        name: "Starter",
+        code: "starter",
+        amount: 49.0,
+        interval: "monthly",
+        metrics: &[0],
+        commitment: 0.0,
+    },
+    Plan {
+        name: "Growth",
+        code: "growth",
+        amount: 199.0,
+        interval: "monthly",
+        metrics: &[0, 1],
+        commitment: 0.0,
+    },
+    Plan {
+        name: "Scale",
+        code: "scale",
+        amount: 799.0,
+        interval: "monthly",
+        metrics: &[0, 1, 4],
+        commitment: 0.0,
+    },
+    Plan {
+        name: "Enterprise",
+        code: "enterprise",
+        amount: 2400.0,
+        interval: "yearly",
+        metrics: &[0, 1, 4],
+        commitment: 600.0,
+    },
+    Plan {
+        name: "AI Tokens",
+        code: "ai_tokens",
+        amount: 0.0,
+        interval: "monthly",
+        metrics: &[2, 3],
+        commitment: 0.0,
+    },
+    Plan {
+        name: "Agent SDK",
+        code: "agent_sdk",
+        amount: 99.0,
+        interval: "monthly",
+        metrics: &[0, 2, 3],
+        commitment: 0.0,
+    },
 ];
 
 /// The plan a subscription moves to on an upgrade.
@@ -166,7 +233,9 @@ fn weekday(iso: &str) -> &'static str {
 /// `finalized` → `Finalized`: statuses as the charts label (and color) them.
 fn title(s: &str) -> String {
     let mut c = s.chars();
-    c.next().map_or_else(String::new, |f| f.to_uppercase().collect::<String>() + c.as_str())
+    c.next().map_or_else(String::new, |f| {
+        f.to_uppercase().collect::<String>() + c.as_str()
+    })
 }
 
 fn round2(x: f64) -> f64 {
@@ -199,7 +268,11 @@ impl Model {
                 name,
                 country,
                 currency,
-                kind: if rng.f() < 0.2 { "individual" } else { "company" },
+                kind: if rng.f() < 0.2 {
+                    "individual"
+                } else {
+                    "company"
+                },
                 wallet: rng.f() < 0.3,
                 size: 0.3 + rng.f() * rng.f() * 2.7,
             });
@@ -230,7 +303,14 @@ impl Model {
     }
 
     /// One subscription and the ones that replace it on upgrades.
-    fn lifecycle(&mut self, rng: &mut Rng, customer: usize, plan: usize, start: i32, previous: Option<usize>) {
+    fn lifecycle(
+        &mut self,
+        rng: &mut Rng,
+        customer: usize,
+        plan: usize,
+        start: i32,
+        previous: Option<usize>,
+    ) {
         let id = self.subscriptions.len();
         let start_day = 1 + (rng.next() % 28) as u32;
         let mut end = None;
@@ -270,7 +350,14 @@ impl Model {
     /// Invoices, payments, usage, and credits for every month of every subscription.
     fn bill(&mut self, rng: &mut Rng) {
         let mut number = 1000;
-        let mut invoice = |model: &mut Model, rng: &mut Rng, customer: usize, plan: Option<usize>, m: i32, day: u32, kind: &'static str, amount: f64| {
+        let mut invoice = |model: &mut Model,
+                           rng: &mut Rng,
+                           customer: usize,
+                           plan: Option<usize>,
+                           m: i32,
+                           day: u32,
+                           kind: &'static str,
+                           amount: f64| {
             number += 1;
             let age = MONTHS - 1 - m;
             let currency = model.customers[customer].currency;
@@ -280,7 +367,11 @@ impl Model {
                 ("GBP", r) if r < 0.3 => "bacs_debit",
                 _ => "card",
             };
-            let status = if rng.f() < 0.02 { "voided" } else { "finalized" };
+            let status = if rng.f() < 0.02 {
+                "voided"
+            } else {
+                "finalized"
+            };
             let mut attempts = Vec::new();
             let mut payment_status = "pending";
             if status == "finalized" && amount > 0.0 {
@@ -292,7 +383,13 @@ impl Model {
                     }
                     let fails = rng.f() < if attempt == 0 { 0.14 } else { 0.45 };
                     if fails {
-                        let error = *rng.pick(&["card_declined", "insufficient_funds", "expired_card", "authentication_required", "processing_error"]);
+                        let error = *rng.pick(&[
+                            "card_declined",
+                            "insufficient_funds",
+                            "expired_card",
+                            "authentication_required",
+                            "processing_error",
+                        ]);
                         attempts.push((day_offset, Some(error)));
                         payment_status = "failed";
                         day_offset += 2 + (rng.next() % 6) as u32;
@@ -308,7 +405,11 @@ impl Model {
                     payment_status = "pending";
                 }
             }
-            let paid = if payment_status == "succeeded" { amount } else { 0.0 };
+            let paid = if payment_status == "succeeded" {
+                amount
+            } else {
+                0.0
+            };
             model.invoices.push(Invoice {
                 number: format!("INV-{number:05}"),
                 customer,
@@ -340,15 +441,29 @@ impl Model {
                 let mut spend = 0.0;
                 for &k in PLANS[plan].metrics {
                     let metric = &METRICS[k];
-                    let units = (metric.base * size * (0.6 + age * 0.05) * (0.75 + rng.f() * 0.5)).round();
+                    let units =
+                        (metric.base * size * (0.6 + age * 0.05) * (0.75 + rng.f() * 0.5)).round();
                     let amount = round2(units * metric.price);
                     spend += amount;
                     self.usage.push((s, m, k, units, amount));
                 }
-                let fee = if self.subscriptions[s].overridden { PLANS[plan].amount * 0.85 } else { PLANS[plan].amount };
+                let fee = if self.subscriptions[s].overridden {
+                    PLANS[plan].amount * 0.85
+                } else {
+                    PLANS[plan].amount
+                };
                 let commitment = (PLANS[plan].commitment - spend).max(0.0);
                 let day = if m == start { start_day } else { 1 };
-                invoice(self, rng, customer, Some(plan), m, day, "subscription", fee + spend + commitment);
+                invoice(
+                    self,
+                    rng,
+                    customer,
+                    Some(plan),
+                    m,
+                    day,
+                    "subscription",
+                    fee + spend + commitment,
+                );
                 if rng.f() < 0.03 {
                     let one_off = 150.0 + (rng.f() * 18.0).round() * 100.0;
                     let day = 5 + (rng.next() % 20) as u32;
@@ -429,7 +544,10 @@ pub fn rows(view: &str) -> Vec<Row> {
             .with("Plan", p.name)
             .with("plan_code", p.code)
             .with("subscription_external_id", format!("sub_{:04}", s.id))
-            .with("customer_external_id", model.customers[s.customer].external_id.as_str())
+            .with(
+                "customer_external_id",
+                model.customers[s.customer].external_id.as_str(),
+            )
             .with("billing_interval", p.interval)
             .with("is_override", s.overridden)
     };
@@ -457,7 +575,14 @@ pub fn rows(view: &str) -> Vec<Row> {
                 rows.push(
                     sub_row(s, last)
                         .with("set", "current")
-                        .with("activated_on", if s.start < 0 { format!("before {}", date(model, 0, 1)) } else { activated })
+                        .with(
+                            "activated_on",
+                            if s.start < 0 {
+                                format!("before {}", date(model, 0, 1))
+                            } else {
+                                activated
+                            },
+                        )
                         .with("active_subscriptions", 1u32)
                         .with("days_active", days)
                         .with("is_plan_change", s.previous.is_some()),
@@ -474,9 +599,26 @@ pub fn rows(view: &str) -> Vec<Row> {
                     .with("weekday", weekday(&activated))
                     .with("activated_on", activated)
                     .with("new_subscriptions", 1u32)
-                    .with("current_status", if s.active(last) { "active" } else { "terminated" })
-                    .with("subscription_type", if s.previous.is_some() { "Plan change" } else { "New" })
-                    .with("previous_plan_name", s.previous.map_or("", |p| PLANS[p].name))
+                    .with(
+                        "current_status",
+                        if s.active(last) {
+                            "active"
+                        } else {
+                            "terminated"
+                        },
+                    )
+                    .with(
+                        "subscription_type",
+                        if s.previous.is_some() {
+                            "Plan change"
+                        } else {
+                            "New"
+                        },
+                    )
+                    .with(
+                        "previous_plan_name",
+                        s.previous.map_or("", |p| PLANS[p].name),
+                    )
             })
             .collect(),
         "subscriptions-churn" => subs
@@ -488,7 +630,14 @@ pub fn rows(view: &str) -> Vec<Row> {
                 sub_row(s, m)
                     .with("weekday", weekday(&terminated))
                     .with("terminated_on", terminated)
-                    .with("termination", if why == "plan_change" { "Plan changes" } else { "Terminations" })
+                    .with(
+                        "termination",
+                        if why == "plan_change" {
+                            "Plan changes"
+                        } else {
+                            "Terminations"
+                        },
+                    )
                     .with("terminations", 1u32)
                     .with("termination_category", why)
                     .with("plan_amount", plan_of(s).amount)
@@ -520,7 +669,11 @@ pub fn rows(view: &str) -> Vec<Row> {
                         let usage: f64 = model
                             .usage
                             .iter()
-                            .filter(|u| u.1 == inv.month && subs[u.0].customer == inv.customer && subs[u.0].plan == p)
+                            .filter(|u| {
+                                u.1 == inv.month
+                                    && subs[u.0].customer == inv.customer
+                                    && subs[u.0].plan == p
+                            })
                             .map(|u| u.4)
                             .sum();
                         let fee = PLANS[p].amount.min(inv.amount - usage).max(0.0);
@@ -528,7 +681,10 @@ pub fn rows(view: &str) -> Vec<Row> {
                         push("Usage-based fee", usage);
                         push("Commitment fee", inv.amount - fee - usage);
                         // Contra revenue, below zero: a coupon on some invoices, a credit note now and then.
-                        let seed = inv.number.bytes().fold(7u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(b)));
+                        let seed = inv
+                            .number
+                            .bytes()
+                            .fold(7u32, |h, b| h.wrapping_mul(31).wrapping_add(u32::from(b)));
                         if seed % 11 == 0 {
                             push("Coupons", -round2(fee * 0.15));
                         }
@@ -548,7 +704,11 @@ pub fn rows(view: &str) -> Vec<Row> {
                     "Offered credits" => "Free credits",
                     _ => continue,
                 };
-                let amount = if kind == "Offered credits" { -amount } else { amount };
+                let amount = if kind == "Offered credits" {
+                    -amount
+                } else {
+                    amount
+                };
                 rows.push(
                     model
                         .base(c, m)
@@ -561,8 +721,21 @@ pub fn rows(view: &str) -> Vec<Row> {
                 );
             }
             // The breakout's line order is the order lines first appear: gross, then contra.
-            let order = ["Subscription fee", "Usage-based fee", "Commitment fee", "One-off fee", "Coupons", "Credit notes", "Prepaid credits", "Free credits"];
-            rows.sort_by_key(|r| order.iter().position(|o| r.get("Stream").as_str() == Some(o)));
+            let order = [
+                "Subscription fee",
+                "Usage-based fee",
+                "Commitment fee",
+                "One-off fee",
+                "Coupons",
+                "Credit notes",
+                "Prepaid credits",
+                "Free credits",
+            ];
+            rows.sort_by_key(|r| {
+                order
+                    .iter()
+                    .position(|o| r.get("Stream").as_str() == Some(o))
+            });
             rows
         }
         // MRR as the breakout reads it: Starting MRR, the movements, Ending MRR. Starting and
@@ -609,7 +782,9 @@ pub fn rows(view: &str) -> Vec<Row> {
                     }
                 };
                 match s.previous {
-                    Some(p) if PLANS[p].amount <= amount => push(&mut rows, s.start, "Expansion", amount - PLANS[p].amount),
+                    Some(p) if PLANS[p].amount <= amount => {
+                        push(&mut rows, s.start, "Expansion", amount - PLANS[p].amount)
+                    }
                     Some(p) => push(&mut rows, s.start, "Contraction", amount - PLANS[p].amount),
                     None => push(&mut rows, s.start, "New", amount),
                 }
@@ -621,7 +796,11 @@ pub fn rows(view: &str) -> Vec<Row> {
             }
             // The breakout's line order is the order lines first appear.
             let order = ["New", "Expansion", "Contraction", "Churn"];
-            rows.sort_by_key(|r| order.iter().position(|o| r.get("Movement").as_str() == Some(o)));
+            rows.sort_by_key(|r| {
+                order
+                    .iter()
+                    .position(|o| r.get("Movement").as_str() == Some(o))
+            });
             starting.extend(rows);
             starting.extend(ending);
             starting
@@ -643,7 +822,12 @@ pub fn rows(view: &str) -> Vec<Row> {
             for c in 0..model.customers.len() {
                 let mut balance = 0.0;
                 for m in 0..MONTHS {
-                    let change: f64 = model.credits.iter().filter(|e| e.0 == c && e.1 == m).map(|e| e.3).sum();
+                    let change: f64 = model
+                        .credits
+                        .iter()
+                        .filter(|e| e.0 == c && e.1 == m)
+                        .map(|e| e.3)
+                        .sum();
                     if change == 0.0 && balance == 0.0 {
                         continue;
                     }
@@ -653,7 +837,10 @@ pub fn rows(view: &str) -> Vec<Row> {
                         model
                             .base(c, m)
                             .with("set", "balance")
-                            .with("customer_external_id", model.customers[c].external_id.as_str())
+                            .with(
+                                "customer_external_id",
+                                model.customers[c].external_id.as_str(),
+                            )
                             .with("amount_currency", model.customers[c].currency)
                             .with("start_of_month_balance", round2(start))
                             .with("monthly_balance_change", round2(change))
@@ -688,7 +875,11 @@ pub fn rows(view: &str) -> Vec<Row> {
                 for (day, error) in &inv.attempts {
                     id += 1;
                     let total = inv.day + day;
-                    let (m, d) = if total > 28 { (inv.month + 1, total - 28) } else { (inv.month, total) };
+                    let (m, d) = if total > 28 {
+                        (inv.month + 1, total - 28)
+                    } else {
+                        (inv.month, total)
+                    };
                     if m >= MONTHS {
                         continue;
                     }
@@ -702,9 +893,23 @@ pub fn rows(view: &str) -> Vec<Row> {
                             .with("email", c.email.as_str())
                             .with("invoice_number", inv.number.as_str())
                             .with("payment_amount", inv.amount)
-                            .with("payment_status", if error.is_some() { "Failed" } else { "Succeeded" })
+                            .with(
+                                "payment_status",
+                                if error.is_some() {
+                                    "Failed"
+                                } else {
+                                    "Succeeded"
+                                },
+                            )
                             .with("payment_method_type", inv.method)
-                            .with("card_brand", if inv.method == "card" { ["visa", "mastercard", "amex"][id % 3] } else { "" })
+                            .with(
+                                "card_brand",
+                                if inv.method == "card" {
+                                    ["visa", "mastercard", "amex"][id % 3]
+                                } else {
+                                    ""
+                                },
+                            )
                             .with("error_code", error.unwrap_or(""))
                             .with("payment_count", 1u32),
                     );
@@ -714,7 +919,11 @@ pub fn rows(view: &str) -> Vec<Row> {
         }
         "dunnings" => {
             let mut rows = Vec::new();
-            for inv in model.invoices.iter().filter(|i| i.attempts.first().is_some_and(|a| a.1.is_some())) {
+            for inv in model
+                .invoices
+                .iter()
+                .filter(|i| i.attempts.first().is_some_and(|a| a.1.is_some()))
+            {
                 let paid = inv.payment_status == "succeeded";
                 let days = inv.attempts.last().map_or(0, |a| a.0);
                 let outcome = match (paid, inv.attempts.len()) {
@@ -723,28 +932,32 @@ pub fn rows(view: &str) -> Vec<Row> {
                     _ => "In progress",
                 };
                 let row = model
-                        .base(inv.customer, inv.month)
-                        .with("invoice_number", inv.number.as_str())
-                        .with("invoice_amount", inv.amount)
-                        .with("status", outcome)
-                        .with("invoice_count", 1u32)
-                        .with("total_dunning_attempts", (inv.attempts.len() - 1) as u32)
-                        .with("invoice_is_paid", paid)
-                        .with("first_attempt_date", date(model, inv.month, inv.day))
-                        .with("revenue_recovered", if paid { inv.amount } else { 0.0 })
-                        .with("invoices_recovered", u32::from(paid))
-                        .with(
-                            "payment_timeframe",
-                            match (paid, days) {
-                                (false, _) => "Not recovered",
-                                (true, 0..=3) => "0–3 days",
-                                (true, 4..=7) => "4–7 days",
-                                (true, 8..=14) => "8–14 days",
-                                _ => "15+ days",
-                            },
-                        );
+                    .base(inv.customer, inv.month)
+                    .with("invoice_number", inv.number.as_str())
+                    .with("invoice_amount", inv.amount)
+                    .with("status", outcome)
+                    .with("invoice_count", 1u32)
+                    .with("total_dunning_attempts", (inv.attempts.len() - 1) as u32)
+                    .with("invoice_is_paid", paid)
+                    .with("first_attempt_date", date(model, inv.month, inv.day))
+                    .with("revenue_recovered", if paid { inv.amount } else { 0.0 })
+                    .with("invoices_recovered", u32::from(paid))
+                    .with(
+                        "payment_timeframe",
+                        match (paid, days) {
+                            (false, _) => "Not recovered",
+                            (true, 0..=3) => "0–3 days",
+                            (true, 4..=7) => "4–7 days",
+                            (true, 8..=14) => "8–14 days",
+                            _ => "15+ days",
+                        },
+                    );
                 // Unpaid invoices have no payment date: the cell stays empty.
-                rows.push(if paid { row.with("days_to_payment", f64::from(days)) } else { row });
+                rows.push(if paid {
+                    row.with("days_to_payment", f64::from(days))
+                } else {
+                    row
+                });
             }
             rows
         }
@@ -753,7 +966,11 @@ pub fn rows(view: &str) -> Vec<Row> {
             .iter()
             .map(|inv| {
                 let c = &model.customers[inv.customer];
-                let outstanding = if inv.status == "finalized" { inv.amount - inv.paid } else { 0.0 };
+                let outstanding = if inv.status == "finalized" {
+                    inv.amount - inv.paid
+                } else {
+                    0.0
+                };
                 let age_days = (last - inv.month) * 30 + 28 - inv.day as i32;
                 let overdue = outstanding > 0.0 && age_days > 30;
                 model
@@ -806,7 +1023,10 @@ mod tests {
             "invoices",
         ] {
             let n = rows(view).len();
-            eprintln!("{view}: {n} rows, {} KB", jt::to_string(&rows(view)).len() / 1024);
+            eprintln!(
+                "{view}: {n} rows, {} KB",
+                jt::to_string(&rows(view)).len() / 1024
+            );
             assert!(n > 10, "{view}: {n} rows");
         }
     }

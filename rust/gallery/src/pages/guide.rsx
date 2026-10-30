@@ -1,4 +1,5 @@
 use crate::pages::guide::Code;
+use crate::site::is_static;
 
 pub fn Guide(spec: &str, chart: &Code, template: &Code, hydrate: &Code, stream: &str, feeds: &Code) -> Element {
     <article class="page">
@@ -19,16 +20,28 @@ pub fn Guide(spec: &str, chart: &Code, template: &Code, hydrate: &Code, stream: 
 
             <h2>2. Hydrate in the browser</h2>
             <Source code={hydrate}></Source>
-            <p><code>hydrate</code> reads each embedded payload, builds the live chart, and replaces the server markup in the same task. A dashboard gets its filters, cross-filtering, brush zoom, and time window back. An element without a payload stays static: open any page with <code>?js=off</code> to see what the server sends.</p>
+            <p><code>hydrate</code> reads each embedded payload, builds the live chart, and replaces the server markup in the same task. A dashboard gets its filters, cross-filtering, brush zoom, and time window back. An element without a payload stays static.
+            if !is_static() {
+                Open any page with <code>?js=off</code> to see what the server sends.
+            }
+            </p>
 
             <h2>3. Follow the data</h2>
-            <p>With a <code>Stream</code>, the page subscribes to server-sent events. Each frame is an envelope or bare rows:</p>
+            if is_static() {
+                <p>With a <code>Stream</code> set to poll, the page reads a recorded timeline: a JSON file of frames, one applied every interval. Each frame is an envelope or bare rows:</p>
+            } else {
+                <p>With a <code>Stream</code>, the page subscribes to server-sent events. Each frame is an envelope or bare rows:</p>
+            }
             <div class="block">{!stream}</div>
 
             <h2>Sample data with jt</h2>
             <p>The feeds are typed Rust structs. jt compiles their JSON templates, so the data endpoints, the stream frames, and the payloads are written without a serializer at runtime.</p>
             <Source code={feeds}></Source>
-            <p>Try <a href="/data/ops?limit=5" dp-boost="false">/data/ops?limit=5</a> and <a href="/data/sales?limit=5" dp-boost="false">/data/sales?limit=5</a>.</p>
+            if is_static() {
+                <p>The recorded timelines: <a href="/data/ops.json" dp-boost="false">/data/ops.json</a> and <a href="/data/sales.json" dp-boost="false">/data/sales.json</a>.</p>
+            } else {
+                <p>Try <a href="/data/ops?limit=5" dp-boost="false">/data/ops?limit=5</a> and <a href="/data/sales?limit=5" dp-boost="false">/data/sales?limit=5</a>.</p>
+            }
         </div>
 
         <h2>Parity</h2>

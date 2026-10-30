@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { readPage } from "../lib/fixtures";
 import { parseLibraries } from "@d3set/gallery-shared/libraries";
+import { siteFromEnv } from "@d3set/gallery-shared/site";
 import { FollowLibrarySwitch, Ready } from "./Ready";
 
-export const metadata: Metadata = { icons: { icon: { url: "/favicon.svg", type: "image/svg+xml" } } };
+/** This gallery's path prefix: "" in dev, `/d3set/next` on GitHub Pages. */
+const { base } = siteFromEnv(process.env);
+
+export const metadata: Metadata = { icons: { icon: { url: `${base}/favicon.svg`, type: "image/svg+xml" } } };
 
 /**
  * The shell of every page: the shared stylesheets and the `<body>` attributes. They are the same on
@@ -17,16 +21,16 @@ export default function Layout({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         {preload.map((href) => (
-          <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="" />
+          <link key={href} rel="preload" href={`${base}${href}`} as="font" type="font/woff2" crossOrigin="" />
         ))}
         {headStyle && <style dangerouslySetInnerHTML={{ __html: headStyle }} />}
-        <link rel="stylesheet" href="/css/d3set.css" />
-        <link rel="stylesheet" href="/css/gallery.css" />
+        <link rel="stylesheet" href={`${base}/css/d3set.css`} />
+        <link rel="stylesheet" href={`${base}/css/gallery.css`} />
       </head>
       <body {...bodyAttrs}>
         {children}
         <Ready />
-        <FollowLibrarySwitch bases={parseLibraries(process.env.GALLERY_LIBRARIES)} />
+        <FollowLibrarySwitch bases={parseLibraries(process.env.GALLERY_LIBRARIES)} own={base} />
       </body>
     </html>
   );

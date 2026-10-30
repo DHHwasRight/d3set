@@ -5,6 +5,7 @@ export {
   Dashboard,
   Hydrate,
   useSseSource,
+  useStreamSource,
   type ChartProps,
   type DashboardProps,
   type HydrateProps,

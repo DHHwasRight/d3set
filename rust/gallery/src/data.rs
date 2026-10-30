@@ -263,12 +263,20 @@ static GENERATOR: LazyLock<Mutex<Generator>> = LazyLock::new(|| Mutex::new(Gener
 
 /// `GALLERY_NOW=2026-10-01T00:00:00Z`: a fixed clock, for galleries that must draw the same rows
 /// (the conformity tests of `galleries/`). The history ends at that instant and the live feeds
-/// send nothing. Unset, the clock is the system's and the feeds are live.
+/// send nothing. Unset, the clock is the system's and the feeds are live, except on a static
+/// site (`GALLERY_STATIC=1`): it has no process to send them, so its clock is [`STATIC_NOW`].
 pub static FROZEN: LazyLock<Option<f64>> = LazyLock::new(|| {
     std::env::var("GALLERY_NOW")
         .ok()
         .and_then(|v| d3set_ssr::time::parse_iso(v.trim()))
+        .or_else(|| {
+            crate::site::is_static()
+                .then(|| d3set_ssr::time::parse_iso(STATIC_NOW).expect("STATIC_NOW"))
+        })
 });
+
+/// The clock of a static site without `GALLERY_NOW`: the same pages on every build.
+pub const STATIC_NOW: &str = "2026-10-01T00:00:00Z";
 
 pub fn now() -> f64 {
     FROZEN.unwrap_or_else(|| {
@@ -288,26 +296,51 @@ fn sales_frame(batch: &[Sale]) -> Vec<u8> {
     format!("data: {}\n\n", jt::to_string(&SalesJson(&refs))).into_bytes()
 }
 
+impl Generator {
+    /// The rows before `t`: 15 minutes of requests and 30 of sales.
+    fn history(&mut self, t: f64) -> (Vec<Request>, Vec<Sale>) {
+        let mut at = t - OPS_HISTORY;
+        let mut requests = Vec::new();
+        while at < t {
+            requests.push(self.request(at));
+            // About 2 requests a second, the same rate as the live batches below.
+            at += 250.0 + self.rng.f() * 500.0;
+        }
+        let mut at = t - SALES_HISTORY;
+        let mut sales = Vec::new();
+        while at < t {
+            sales.push(self.sale(at));
+            at += 500.0 + self.rng.f() * 3000.0;
+        }
+        (requests, sales)
+    }
+
+    /// One tick at `at`: 0–2 requests, and a sale one tick in four.
+    fn batch(&mut self, at: f64) -> (Vec<Request>, Vec<Sale>) {
+        let n = (self.rng.next() % 3) as usize;
+        let requests = (0..n)
+            .map(|i| self.request(at - (n - 1 - i) as f64 * 120.0))
+            .collect();
+        let sales = if self.rng.f() < 0.25 {
+            vec![self.sale(at)]
+        } else {
+            vec![]
+        };
+        (requests, sales)
+    }
+}
+
+/// When the history ends: the fixed clock, or the moment the feeds started.
+static STARTED: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+
 /// Fill the history, then append a batch every tick. Call once, inside the runtime.
 pub fn start() {
-    let t = now();
+    let t = *STARTED.get_or_init(now);
     {
         let mut g = GENERATOR.lock().expect("generator lock");
-        let mut at = t - OPS_HISTORY;
-        let mut history = Vec::new();
-        while at < t {
-            history.push(g.request(at));
-            // About 2 requests a second, the same rate as the live batches below.
-            at += 250.0 + g.rng.f() * 500.0;
-        }
-        OPS.push(history, Vec::new());
-        let mut at = t - SALES_HISTORY;
-        let mut history = Vec::new();
-        while at < t {
-            history.push(g.sale(at));
-            at += 500.0 + g.rng.f() * 3000.0;
-        }
-        SALES.push(history, Vec::new());
+        let (requests, sales) = g.history(t);
+        OPS.push(requests, Vec::new());
+        SALES.push(sales, Vec::new());
     }
     // A fixed clock has no future: the feeds keep their history.
     if FROZEN.is_some() {
@@ -317,21 +350,8 @@ pub fn start() {
         let mut tick = tokio::time::interval(TICK);
         loop {
             tick.tick().await;
-            let at = now();
-            let (requests, sales) = {
-                let mut g = GENERATOR.lock().expect("generator lock");
-                let n = (g.rng.next() % 3) as usize;
-                let requests: Vec<Request> = (0..n)
-                    .map(|i| g.request(at - (n - 1 - i) as f64 * 120.0))
-                    .collect();
-                // An empty batch still goes out: it costs one small frame and keeps proxies from closing the stream.
-                let sales: Vec<Sale> = if g.rng.f() < 0.25 {
-                    vec![g.sale(at)]
-                } else {
-                    vec![]
-                };
-                (requests, sales)
-            };
+            let (requests, sales) = GENERATOR.lock().expect("generator lock").batch(now());
+            // An empty batch still goes out: it costs one small frame and keeps proxies from closing the stream.
             let frame = requests_frame(&requests);
             OPS.push(requests, frame);
             if !sales.is_empty() {
@@ -340,6 +360,46 @@ pub fn start() {
             }
         }
     });
+}
+
+/// Frames in a recorded timeline, and the time between two of them: two minutes of the feed.
+pub const TIMELINE_FRAMES: usize = 60;
+pub const TIMELINE_INTERVAL: u32 = 2000;
+
+/// `/data/{feed}.json`: what the live feed sends in the [`TIMELINE_FRAMES`] frames after the
+/// history ends, one frame per [`TIMELINE_INTERVAL`] (the batches of 4 ticks). A static host
+/// serves this file, and d3set's poll source replays it: the charts move without a server.
+///
+/// A fresh generator replays the history first, so a frame continues the rows the page embeds,
+/// and the same clock gives the same bytes. `None` for a feed that does not exist.
+pub fn timeline_json(feed: &str) -> Option<String> {
+    timeline_at(feed, STARTED.get().copied().unwrap_or_else(now))
+}
+
+/// The timeline of `feed` for a history that ends at `t`.
+fn timeline_at(feed: &str, t: f64) -> Option<String> {
+    if !matches!(feed, "ops" | "sales") {
+        return None;
+    }
+    let mut g = Generator::new();
+    g.history(t);
+    let ticks = (TIMELINE_INTERVAL as f64 / TICK.as_millis() as f64) as usize;
+    let mut frames = Vec::with_capacity(TIMELINE_FRAMES);
+    for f in 0..TIMELINE_FRAMES {
+        let (mut requests, mut sales) = (Vec::new(), Vec::new());
+        for k in 1..=ticks {
+            let at = t + ((f * ticks + k) as f64) * TICK.as_millis() as f64;
+            let (r, s) = g.batch(at);
+            requests.extend(r);
+            sales.extend(s);
+        }
+        frames.push(if feed == "ops" {
+            jt::to_string(&RequestsJson(&requests.iter().collect::<Vec<_>>()))
+        } else {
+            jt::to_string(&SalesJson(&sales.iter().collect::<Vec<_>>()))
+        });
+    }
+    Some(jt::to_string(&Timeline(TIMELINE_INTERVAL, &frames)))
 }
 
 /// The last `limit` rows of a feed as d3set rows, for server rendering.
@@ -413,5 +473,75 @@ pub fn catch_up(feed: &str, since: Option<f64>) -> Option<(Vec<u8>, Frames)> {
             |rs| jt::to_string(&SalesJson(rs)),
         )),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const T: f64 = 1_790_812_800_000.0; // 2026-10-01T00:00:00Z
+
+    /// The `at` of every row in `json`, in order.
+    fn times(json: &str) -> Vec<f64> {
+        json.split("\"at\":\"")
+            .skip(1)
+            .map(|rest| d3set_ssr::time::parse_iso(&rest[..rest.find('"').unwrap()]).unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn a_timeline_has_60_frames_every_2_seconds_after_the_history() {
+        for feed in ["ops", "sales"] {
+            let json = timeline_at(feed, T).unwrap();
+            assert!(
+                json.starts_with("{\"interval\":2000,\"frames\":[["),
+                "{feed}: {}",
+                &json[..40]
+            );
+            // A frame is an array of rows: 60 of them, empty ones included.
+            let frames = json.matches("[").count() - 1;
+            assert_eq!(frames, TIMELINE_FRAMES, "{feed}");
+            let at = times(&json);
+            assert!(!at.is_empty(), "{feed}: no rows in two minutes");
+            // Every row is newer than the history the page embeds, within the two minutes, in order.
+            assert!(
+                at.iter().all(|&a| a > T - 1000.0 && a <= T + 120_000.0),
+                "{feed}: {at:?}"
+            );
+            assert!(
+                at.windows(2).all(|w| w[0] <= w[1]),
+                "{feed}: rows out of order"
+            );
+        }
+    }
+
+    #[test]
+    fn a_timeline_continues_the_history_ids_and_is_the_same_every_time() {
+        let mut g = Generator::new();
+        let (requests, sales) = g.history(T);
+        let a = timeline_at("ops", T).unwrap();
+        assert_eq!(a, timeline_at("ops", T).unwrap());
+        let first = format!("\"id\":{},", requests.last().unwrap().id + 1);
+        assert!(a.contains(&first), "ops does not continue at {first}");
+        let first = format!("\"id\":{},", sales.last().unwrap().id + 1);
+        assert!(
+            timeline_at("sales", T).unwrap().contains(&first),
+            "sales does not continue at {first}"
+        );
+        assert!(timeline_at("nope", T).is_none());
+    }
+
+    #[test]
+    fn a_timeline_shifts_the_time_and_id_of_each_loop() {
+        // Both feeds key rows by a numeric `id` and time them by an ISO `at`.
+        for feed in ["ops", "sales"] {
+            let json = timeline_at(feed, T).unwrap();
+            assert!(
+                json.ends_with(r#"],"shift":{"time":"at","key":"id"}}"#),
+                "{feed}: {}",
+                &json[json.len().saturating_sub(60)..]
+            );
+        }
     }
 }

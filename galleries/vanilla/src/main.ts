@@ -15,6 +15,7 @@ import {
 } from "@d3set/gallery-shared";
 import { fill } from "@d3set/gallery-shared/docs";
 import { followLibrarySwitch, markLibrary, parseLibraries } from "@d3set/gallery-shared/libraries";
+import { inBase, stripBase, withBase, withStreams } from "@d3set/gallery-shared/site";
 import snippets from "virtual:snippets";
 import { docs } from "./docs";
 import { drawChart } from "./snippets/chart";
@@ -26,6 +27,9 @@ const fixtures = import.meta.glob<Page>("../../shared/fixtures/original/*.json",
 
 /** Where the other galleries run, for the library switch. */
 const libraries = parseLibraries(__GALLERY_LIBRARIES__);
+
+/** This gallery's path prefix ("" in dev), and where the charts' data comes from. */
+const site = __GALLERY_SITE__;
 
 /** Charts and dashboards found while building the DOM, drawn once it is in the document. */
 interface Pending {
@@ -107,7 +111,8 @@ async function render(): Promise<void> {
   teardown = [];
 
   const url = new URL(location.href);
-  const load = fixtures[`../../shared/fixtures/original/${fixtureName(url.pathname)}.json`];
+  const path = stripBase(url.pathname, site.base);
+  const load = fixtures[`../../shared/fixtures/original/${fixtureName(path)}.json`];
   // An unknown path shows the overview, as the gallery has no 404 page of its own.
   const page = await (load ?? fixtures["../../shared/fixtures/original/index.json"]!)();
   if (id !== navigation) return;
@@ -116,7 +121,9 @@ async function render(): Promise<void> {
   for (const [name, value] of Object.entries(page.bodyAttrs)) document.body.setAttribute(name, value);
   const pending: Pending = { charts: [], dashboards: [] };
   // The parts of the page this gallery writes itself: its own code, and the words about it.
-  const body = markLibrary(fill(page.body, docs, snippets), "vanilla", libraries, page.path);
+  // Then the links under this gallery's prefix, and the charts' data where the site keeps it.
+  const own = withStreams(withBase(fill(page.body, docs, snippets), site.base), site.data);
+  const body = markLibrary(own, "vanilla", libraries, page.path);
   document.body.replaceChildren(...body.map((n) => build(n, pending)));
   if (!url.hash) window.scrollTo(0, 0);
 
@@ -130,7 +137,8 @@ document.addEventListener("click", (event) => {
   const a = (event.target as Element | null)?.closest?.("a[href]");
   if (!(a instanceof HTMLAnchorElement) || a.target || a.hasAttribute("download")) return;
   const to = new URL(a.href);
-  if (to.origin !== location.origin) return;
+  // Another gallery of the same site (GitHub Pages): a page load.
+  if (to.origin !== location.origin || !inBase(to.pathname, site.base)) return;
   // A jump inside the page: the browser scrolls to it.
   if (to.pathname === location.pathname && to.search === location.search && to.hash) return;
   event.preventDefault();
@@ -142,5 +150,5 @@ window.addEventListener("popstate", () => {
   render().catch((err) => console.error("gallery: navigation:", err));
 });
 
-followLibrarySwitch(libraries);
+followLibrarySwitch(libraries, site.base);
 render().catch((err) => console.error("gallery: first load:", err));

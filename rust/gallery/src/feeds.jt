@@ -32,3 +32,12 @@ pub fn SalesJson(rows: &[&Sale]) -> Json = [ for s in rows { SaleJson(s) } ];
 
 // The first frame of a connection: a `replace` snapshot, or an `upsert` catch-up.
 pub fn Envelope(op: &str, rows: jt::Raw<'_>) -> Json { "op": op, "rows": rows }
+
+// A recorded timeline: one frame (a batch of rows) per `interval` milliseconds. `shift` makes each
+// loop new rows: the poll source moves `at` forward one loop per pass and gives `id` new numbers,
+// so an upsert by id keeps adding rows instead of rewriting the same ones.
+pub fn Timeline(interval: u32, frames: &[String]) -> Json {
+    "interval": interval,
+    "frames": [ for f in frames { jt::Raw(f.as_str()) } ],
+    "shift": { "time": "at", "key": "id" },
+}

@@ -1,6 +1,6 @@
 use crate::catalog::Entry;
 use crate::pages::charts::_kind_::Neighbor;
-use crate::site::{inline_code, ExampleView};
+use crate::site::{inline_code, is_static, ExampleView};
 
 pub fn ChartPage(entry: &Entry, examples: &[ExampleView], template: &str, js: bool, path: &str, prev: Option<&Neighbor>, next: Option<&Neighbor>) -> Element {
     <article class="page">
@@ -8,7 +8,10 @@ pub fn ChartPage(entry: &Entry, examples: &[ExampleView], template: &str, js: bo
         <h1>{entry.name}</h1>
         <p class="lead">{!inline_code(entry.summary)}</p>
         <div class="callout" data-snippet="mode">
-            if js {
+            if is_static() {
+                <span class="badge badge-live">Live</span>
+                Rendered ahead of time, then hydrated and fed from a recorded timeline.
+            } else if js {
                 <span class="badge badge-live">Live</span>
                 Rendered on the server, then hydrated and fed over SSE.
                 <a href={off_href(path)} dp-boost="false">View without JavaScript</a>

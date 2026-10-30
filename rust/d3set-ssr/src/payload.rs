@@ -137,6 +137,8 @@ jt::template! {
         "url": s.url.as_str(),
         "maxRows"?: s.max_rows,
         if let Some(key) = &s.key { "mode": "upsert", "key": key.as_str() }
+        "transport"?: s.transport,
+        "interval"?: s.interval,
     }
 }
 
@@ -165,4 +167,30 @@ jt::template! {
 /// JSON for a `<script type="application/json">`: `</` cannot close the script element.
 pub fn script_safe(json: String) -> String {
     json.replace("</", "<\\/")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stream_json_leaves_out_an_unset_transport() {
+        let s = Stream::new("/data/sales").max_rows(10).key("id");
+        assert_eq!(
+            jt::to_string(&StreamJson(&s)),
+            r#"{"url":"/data/sales","maxRows":10,"mode":"upsert","key":"id"}"#
+        );
+    }
+
+    #[test]
+    fn stream_json_writes_the_poll_transport() {
+        let s = Stream::new("/d3set/data/sales.json")
+            .key("id")
+            .poll()
+            .interval(2000);
+        assert_eq!(
+            jt::to_string(&StreamJson(&s)),
+            r#"{"url":"/d3set/data/sales.json","mode":"upsert","key":"id","transport":"poll","interval":2000}"#
+        );
+    }
 }

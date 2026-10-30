@@ -40,9 +40,36 @@ pub fn with_js<R>(on: bool, f: impl FnOnce() -> R) -> R {
 pub static SWAP_RING: LazyLock<bool> =
     LazyLock::new(|| std::env::var("GALLERY_SWAP_RING").is_ok_and(|v| v == "1"));
 
-/// The body attributes that turn the swap ring on, or none.
+/// The body attributes that turn the swap ring on, or none. A static site has no ring.
 pub fn swap_ring_attrs() -> Option<(&'static str, &'static str)> {
-    SWAP_RING.then_some(("data-swap-ring", ""))
+    (*SWAP_RING && !*STATIC).then_some(("data-swap-ring", ""))
+}
+
+/// `GALLERY_STATIC=1`: the pages a static host serves. The streams poll a recorded timeline
+/// (`/data/{feed}.json`), the clock is fixed, and nothing links to what needs a server
+/// (`?js=off`, the event streams). Read once, at startup.
+pub static STATIC: LazyLock<bool> =
+    LazyLock::new(|| std::env::var("GALLERY_STATIC").is_ok_and(|v| v == "1"));
+
+/// `GALLERY_BASE=/d3set`: the path the site is served under. Only the URLs inside JSON payloads
+/// and the client's configuration carry it: the static export rewrites the HTML attributes.
+/// Empty by default; a trailing `/` is dropped.
+pub static BASE: LazyLock<String> = LazyLock::new(|| {
+    std::env::var("GALLERY_BASE")
+        .unwrap_or_default()
+        .trim()
+        .trim_end_matches('/')
+        .to_string()
+});
+
+/// Whether these are the pages of a static site.
+pub fn is_static() -> bool {
+    *STATIC
+}
+
+/// The path the site is served under: `""` or `/d3set`.
+pub fn base() -> &'static str {
+    &BASE
 }
 
 pub fn rows(feed: Feed, limit: usize) -> Vec<Row> {
@@ -68,7 +95,13 @@ pub fn example(e: &Example, live: bool) -> Result<ExampleView, d3set_ssr::Error>
     let rows = rows(e.feed, EXAMPLE_ROWS);
     let width = crate::styles::page_chart_width();
     let stream = live.then(|| stream(e.feed, &rows, EXAMPLE_ROWS));
-    let html = crate::snippets::chart::render(&e.spec, &rows, crate::styles::theme(), width, stream.as_ref())?;
+    let html = crate::snippets::chart::render(
+        &e.spec,
+        &rows,
+        crate::styles::theme(),
+        width,
+        stream.as_ref(),
+    )?;
     Ok(ExampleView {
         title: e.title,
         note: e.note,
@@ -85,7 +118,11 @@ pub fn example(e: &Example, live: bool) -> Result<ExampleView, d3set_ssr::Error>
 pub fn thumbnail(spec: &Spec, feed: Feed) -> Result<String, d3set_ssr::Error> {
     let mut spec = spec.clone();
     spec.title = None;
-    spec.height = Some(if matches!(spec.kind.as_str(), "kpi" | "slo") { 72 } else { 150 });
+    spec.height = Some(if matches!(spec.kind.as_str(), "kpi" | "slo") {
+        72
+    } else {
+        150
+    });
     if spec.kind == "table" {
         spec.limit = Some(6);
     }

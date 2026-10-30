@@ -1,6 +1,7 @@
 import { createChart } from "./chart";
 import type { Chart, ChartSpec } from "./charts/types";
 import { createDashboard, type Dashboard } from "./dashboard";
+import { pollSource } from "./data/poll";
 import { sseSource } from "./data/sse";
 import { staticSource } from "./data/static";
 import type { DataSource, MergeMode, Row } from "./data/types";
@@ -12,8 +13,34 @@ interface Payload {
   /** A full theme (the server's tokens), or the name of a built-in theme. */
   theme?: Theme | string;
   rows?: Row[];
-  /** Live rows over SSE. With `key`, rows upsert by that field (a replayed catch-up does not count twice). */
-  stream?: string | { url: string; maxRows?: number; mode?: MergeMode; key?: string };
+  /**
+   * Live rows: server-sent events, or with `transport: "poll"` a JSON file fetched again and again
+   * (see `pollSource`). With `key`, rows upsert by that field (a replayed catch-up does not count
+   * twice).
+   */
+  stream?: StreamOption;
+}
+
+/** Where a hydrated chart's live rows come from. A string is a server-sent events URL. */
+export type StreamOption =
+  | string
+  | {
+      url: string;
+      maxRows?: number;
+      mode?: MergeMode;
+      key?: string;
+      /** `"sse"` (default): server-sent events. `"poll"`: a JSON file, for a static host. */
+      transport?: "sse" | "poll";
+      /** For `"poll"`: milliseconds between fetches. A timeline file's own `interval` wins. */
+      interval?: number;
+    };
+
+/** The source a stream option describes, starting from `rows`. */
+export function streamSource(stream: StreamOption, rows: Row[] = []): DataSource {
+  const s = typeof stream === "string" ? { url: stream } : stream;
+  const merge = { maxRows: s.maxRows, mode: s.mode, key: s.key, initial: rows };
+  if ("transport" in s && s.transport === "poll") return pollSource({ url: s.url, interval: s.interval, ...merge });
+  return sseSource({ url: s.url, ...merge });
 }
 
 export interface DashboardPayload extends Payload {
@@ -82,8 +109,7 @@ function themeOf(p: Payload, opts: HydrateOptions): Theme {
 function sourceOf(p: Payload): DataSource {
   const rows = p.rows ?? [];
   if (!p.stream) return staticSource(rows);
-  const s = typeof p.stream === "string" ? { url: p.stream } : p.stream;
-  return sseSource({ url: s.url, maxRows: s.maxRows, mode: s.mode, key: s.key, initial: rows });
+  return streamSource(p.stream, rows);
 }
 
 /**

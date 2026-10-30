@@ -14,7 +14,7 @@ export interface ServerProps {
 export type ServerChartProps = Omit<RenderChartOptions, "payload"> & ServerProps;
 export type ServerDashboardProps = Omit<RenderDashboardOptions, "payload"> & ServerProps;
 
-/** One chart, drawn on the server. With `stream`, it follows server-sent events once hydrated. */
+/** One chart, drawn on the server. With `stream`, it follows its live source once hydrated. */
 export function ServerChart({ hydrate = true, className, ...options }: ServerChartProps) {
   return frame(renderChart({ ...options, payload: hydrate }), hydrate, className);
 }

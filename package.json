@@ -43,7 +43,9 @@
     "test": "vitest run",
     "format": "prettier --write src test examples",
     "build:browser": "vite build -c vite.browser.config.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "pages:build": "node scripts/pages/build.mjs",
+    "pages:serve": "node scripts/pages/serve.mjs"
   },
   "dependencies": {
     "d3": "^7.9.0",

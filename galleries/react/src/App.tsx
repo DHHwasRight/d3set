@@ -1,16 +1,20 @@
 import type { Page } from "@d3set/gallery-shared";
 import { fill } from "@d3set/gallery-shared/docs";
 import { followLibrarySwitch, markLibrary, parseLibraries } from "@d3set/gallery-shared/libraries";
+import { stripBase, withBase, withStreams } from "@d3set/gallery-shared/site";
 import snippets from "virtual:snippets";
 import { docs } from "./docs";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { preload } from "react-dom";
-import { applyHead, loadPage, normalize } from "./fixtures";
+import { applyHead, loadPage } from "./fixtures";
 import { interceptLinks, useLocation } from "./router";
 import { countDrawn, Drawn, render } from "./Tree";
 
 /** Where the other galleries run, for the library switch. */
 const libraries = parseLibraries(__GALLERY_LIBRARIES__);
+
+/** This gallery's path prefix ("" in dev), and where the charts' data comes from. */
+const site = __GALLERY_SITE__;
 
 /** Tell the conformity tests (and anyone waiting) whether the current page is fully drawn. */
 function setReady(ready: boolean) {
@@ -19,12 +23,12 @@ function setReady(ready: boolean) {
 
 /** The gallery: the page of the current URL. */
 export function App() {
-  const path = normalize(useLocation().pathname);
+  const path = stripBase(useLocation().pathname, site.base);
   // `undefined` while the first page loads; `page: undefined` for a path the gallery lacks.
   const [shown, setShown] = useState<{ key: string; page?: Page }>();
 
   useEffect(() => interceptLinks(), []);
-  useEffect(() => followLibrarySwitch(libraries), []);
+  useEffect(() => followLibrarySwitch(libraries, site.base), []);
 
   useEffect(() => {
     let alive = true;
@@ -34,11 +38,10 @@ export function App() {
       if (page) await applyHead(page);
       // The previous page, and its charts, unmount when the new one replaces it.
       // The parts of the page this gallery writes itself: its own code, and the words about it.
+      // Then the links under this gallery's prefix, and the charts' data where the site keeps it.
+      const body = page && withStreams(withBase(fill(page.body, docs, snippets), site.base), site.data);
       if (alive)
-        setShown({
-          key: path,
-          page: page && { ...page, body: markLibrary(fill(page.body, docs, snippets), "react", libraries, page.path) },
-        });
+        setShown({ key: path, page: page && { ...page, body: markLibrary(body!, "react", libraries, page.path) } });
     })();
     return () => {
       alive = false;
@@ -81,7 +84,7 @@ function NotFound() {
       <article className="page">
         <h1>Not found</h1>
         <p>
-          The gallery has no page here. <a href="/">Back to the overview</a>.
+          The gallery has no page here. <a href={`${site.base}/`}>Back to the overview</a>.
         </p>
       </article>
     </main>

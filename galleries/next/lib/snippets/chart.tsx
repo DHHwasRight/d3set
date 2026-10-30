@@ -9,6 +9,8 @@ interface Props {
   width: number;
 }
 
-export function GalleryChart({ chart: { spec, rows, theme }, width }: Props) {
-  return <ServerChart spec={spec} rows={rows} theme={theme as Theme} width={width} />;
+// With a `stream` (on GitHub Pages, a JSON timeline polled with `transport: "poll"`), the hydrated
+// chart follows it.
+export function GalleryChart({ chart: { spec, rows, theme, stream }, width }: Props) {
+  return <ServerChart spec={spec} rows={rows} stream={stream} theme={theme as Theme} width={width} />;
 }

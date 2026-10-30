@@ -150,6 +150,11 @@ pub struct Stream {
     /// Row identity field. With it, rows that arrive twice (a reconnect replaying a catch-up) replace
     /// themselves instead of counting twice.
     pub key: Option<String>,
+    /// How the browser reads `url`: `"sse"` (server-sent events, the default when `None`) or
+    /// `"poll"` (fetch a JSON file, for a static host).
+    pub transport: Option<&'static str>,
+    /// For `"poll"`: milliseconds between fetches, or between the frames of a timeline file.
+    pub interval: Option<u64>,
 }
 
 impl Stream {
@@ -158,7 +163,21 @@ impl Stream {
             url: url.into(),
             max_rows: None,
             key: None,
+            transport: None,
+            interval: None,
         }
+    }
+    /// Read `url` by polling a JSON file instead of server-sent events.
+    #[must_use]
+    pub fn poll(mut self) -> Self {
+        self.transport = Some("poll");
+        self
+    }
+    /// Milliseconds between polls. A timeline file's own `interval` wins over it.
+    #[must_use]
+    pub fn interval(mut self, ms: u64) -> Self {
+        self.interval = Some(ms);
+        self
     }
     #[must_use]
     pub fn max_rows(mut self, n: usize) -> Self {

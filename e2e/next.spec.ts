@@ -18,7 +18,9 @@ test("server-rendered dashboard: charts in the HTML, hydrated in place, then liv
   const errors = watchErrors(page);
   await page.goto("/server");
   const card = page.locator(".d3s-card").nth(2);
-  const before = await card.boundingBox();
+  // Hydration replaces the card's content: a box read at that moment is null, so read until set.
+  let before: Awaited<ReturnType<typeof card.boundingBox>> = null;
+  await expect.poll(async () => (before = await card.boundingBox())).not.toBeNull();
   // Hydrated: the payload element is consumed.
   await expect(page.locator("[data-d3s-dashboard]")).toHaveCount(0);
   expect(await card.boundingBox()).toEqual(before);

@@ -10,11 +10,6 @@ export function loadPage(path: string): Promise<Page> | undefined {
   return files[`../../shared/fixtures/original/${fixtureName(path)}.json`]?.();
 }
 
-/** `/charts/bar/` is `/charts/bar`. */
-export function normalize(path: string): string {
-  return path.length > 1 ? path.replace(/\/+$/, "") : path;
-}
-
 /**
  * The page's own head: title, `<body>` attributes and its fonts, if any. The fonts load before
  * the page draws, as the preloads make them in the Rust gallery, so text never reflows under a chart.

@@ -1,2 +1,3 @@
-# Written by `tsc` (incremental type checks).
-tsconfig.tsbuildinfo
+# The static export of `build:pages` (output: "export").
+/out
+/tsconfig.tsbuildinfo

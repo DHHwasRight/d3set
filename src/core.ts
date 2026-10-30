@@ -6,15 +6,18 @@ export { createChart, type ChartOptions, type MountedChart } from "./chart";
 export {
   hydrate,
   payloadTypes,
+  streamSource,
   type ChartPayload,
   type DashboardPayload,
   type HydrateOptions,
   type Hydrated,
+  type StreamOption,
 } from "./hydrate";
 
 export { applyTheme, createTheme, darkTheme, lightTheme, themeToCssVars, type Theme } from "./theme/theme";
 
 export { sseSource, buildUrl, type SseSourceOptions } from "./data/sse";
+export { pollSource, type PollSourceOptions, type Timeline } from "./data/poll";
 export { staticSource } from "./data/static";
 export { mergeRows, type MergeOptions } from "./data/merge";
 export type { DataSource, Envelope, MergeMode, Row, SourceState } from "./data/types";

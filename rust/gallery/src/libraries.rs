@@ -15,10 +15,26 @@ pub struct Library {
 
 /// In the order of the switch.
 pub const LIBRARIES: [Library; 4] = [
-    Library { id: "vanilla", name: "Vanilla", default: "http://localhost:3300" },
-    Library { id: "rsx", name: "Rust", default: "http://localhost:3000" },
-    Library { id: "react", name: "React", default: "http://localhost:3310" },
-    Library { id: "next", name: "Next.js", default: "http://localhost:3320" },
+    Library {
+        id: "vanilla",
+        name: "Vanilla",
+        default: "http://localhost:3300",
+    },
+    Library {
+        id: "rsx",
+        name: "Rust",
+        default: "http://localhost:3000",
+    },
+    Library {
+        id: "react",
+        name: "React",
+        default: "http://localhost:3310",
+    },
+    Library {
+        id: "next",
+        name: "Next.js",
+        default: "http://localhost:3320",
+    },
 ];
 
 /// This gallery.
@@ -30,14 +46,24 @@ pub const ENV: &str = "GALLERY_LIBRARIES";
 /// A trailing `/` is dropped, so a base and a path join with one slash.
 pub fn parse(value: Option<&str>) -> Result<Vec<String>, String> {
     let mut bases: Vec<String> = LIBRARIES.iter().map(|l| l.default.to_string()).collect();
-    for item in value.unwrap_or("").split(',').map(str::trim).filter(|s| !s.is_empty()) {
+    for item in value
+        .unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
         let (id, url) = item
             .split_once('=')
             .ok_or_else(|| format!("{ENV}: `{item}`: expected id=url"))?;
         let i = LIBRARIES
             .iter()
             .position(|l| l.id == id.trim())
-            .ok_or_else(|| format!("{ENV}: unknown library `{}` (vanilla, rsx, react, next)", id.trim()))?;
+            .ok_or_else(|| {
+                format!(
+                    "{ENV}: unknown library `{}` (vanilla, rsx, react, next)",
+                    id.trim()
+                )
+            })?;
         bases[i] = url.trim().trim_end_matches('/').to_string();
     }
     Ok(bases)
@@ -67,7 +93,15 @@ mod tests {
     #[test]
     fn defaults_and_overrides() {
         let d = parse(None).unwrap();
-        assert_eq!(d, ["http://localhost:3300", "http://localhost:3000", "http://localhost:3310", "http://localhost:3320"]);
+        assert_eq!(
+            d,
+            [
+                "http://localhost:3300",
+                "http://localhost:3000",
+                "http://localhost:3310",
+                "http://localhost:3320"
+            ]
+        );
         let b = parse(Some("next=https://next.example.com/, rsx = http://a:1")).unwrap();
         assert_eq!(b[1], "http://a:1");
         assert_eq!(b[3], "https://next.example.com");

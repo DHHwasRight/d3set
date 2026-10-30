@@ -14,6 +14,7 @@ brocanth = { path = "../../../brocanth/crates/brocanth" }
 brocanth-pages = { path = "../../../brocanth/crates/brocanth-pages" }
 brocanth-assets = { path = "../../../brocanth/crates/brocanth-assets" }
 brocanth-server = { path = "../../../brocanth/crates/brocanth-server" }
+brocanth-static = { path = "../../../brocanth/crates/brocanth-static" }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "macros"] }
 # Code highlighting with TextMate grammars and VS Code themes, the same output as the editor.
 giallo = { version = "0.5", features = ["dump"] }

@@ -1,6 +1,13 @@
 "use client";
 
-import { sseSource, type DataSource, type SseSourceOptions } from "d3set/core";
+import {
+  sseSource,
+  streamSource,
+  type DataSource,
+  type Row,
+  type SseSourceOptions,
+  type StreamOption,
+} from "d3set/core";
 import { useEffect, useState } from "react";
 
 /**
@@ -22,5 +29,27 @@ export function useSseSource(url: string, options: Omit<SseSourceOptions, "url">
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url, key]);
+  return source;
+}
+
+/**
+ * Rows from a stream option, as a server writes it into a payload: server-sent events, or with
+ * `transport: "poll"` a JSON file (a static host). Mounted in the browser only, like `useSseSource`.
+ * `rows` are the rows the page was drawn with: the source starts from them, so the first frame
+ * does not change.
+ */
+export function useStreamSource(stream: StreamOption | undefined, rows: Row[] = []): DataSource | undefined {
+  const key = JSON.stringify(stream ?? null);
+  const [source, setSource] = useState<DataSource | undefined>(undefined);
+  useEffect(() => {
+    if (!stream) return;
+    const next = streamSource(stream, rows);
+    setSource(next);
+    return () => {
+      next.close();
+      setSource(undefined);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   return source;
 }

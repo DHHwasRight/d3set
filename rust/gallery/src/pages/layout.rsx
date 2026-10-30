@@ -3,7 +3,7 @@
 use crate::catalog::{entry, GROUPS};
 use crate::libraries::{links, CURRENT};
 use crate::pages::TITLE;
-use crate::site::{js, swap_ring_attrs};
+use crate::site::{base, is_static, js, swap_ring_attrs};
 
 pub fn Layout(layout: &str, path: &str, children: Element) -> Element {
     <!DOCTYPE html>
@@ -13,6 +13,10 @@ pub fn Layout(layout: &str, path: &str, children: Element) -> Element {
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <title>{TITLE} · charts rendered on the server</title>
             <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+            // A static host cannot read DP-Partial: dp-swap fetches partials/<depth>/<path>.
+            if is_static() {
+                <meta name="dp-config" content={dp_config()}>
+            }
             <link rel="stylesheet" href={crate::assets::url("css/d3set.css")}>
             <link rel="stylesheet" href={crate::assets::url("css/gallery.css")}>
         </head>
@@ -63,7 +67,7 @@ pub fn TopNav(path: &str, oob: bool) -> Element {
 // The same page drawn by each binding, each on its own server: not boosted. The links name the
 // current path; `_src/library-switch.js` keeps them right when only `#app` changed.
 pub fn LibrarySwitch(path: &str, oob: bool) -> Element {
-    <nav class="library-switch" id="library-switch" aria-label="Library" { ...oob_attrs(oob) }>
+    <nav class="library-switch" id="library-switch" aria-label="Library" data-path={path} { ...oob_attrs(oob) }>
         for (library, href) in links(path) {
             <a href={href} data-library={library.id} dp-boost="false" { ...current_attr(library.id) }>{library.name}</a>
         }
@@ -95,6 +99,11 @@ pub fn SideNav(path: &str, oob: bool) -> Element {
             <a href="/analytics" class={prefix_class(path, "/analytics")}>Billing</a>
         </div>
     </nav>
+}
+
+/// dp-swap's settings on a static site: the partial trees, under the site's base path.
+fn dp_config() -> String {
+    format!(r#"{{"partialDir":"partials","base":"{}"}}"#, base())
 }
 
 fn prefix_class(path: &str, prefix: &str) -> &'static str {

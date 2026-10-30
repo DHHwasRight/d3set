@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fill } from "@d3set/gallery-shared/docs";
 import { markLibrary, parseLibraries } from "@d3set/gallery-shared/libraries";
+import { siteFromEnv, withBase, withStreams } from "@d3set/gallery-shared/site";
 import { docs, snippets } from "../../lib/docs";
 import { PATHS, readPage, toPath, toSegments } from "../../lib/fixtures";
 import { render } from "../../lib/render";
@@ -33,5 +34,8 @@ export default async function Page(props: Props) {
   const { body, path } = await page(props);
   // The library switch: this gallery's item current, each link to this page in its gallery.
   const libraries = parseLibraries(process.env.GALLERY_LIBRARIES);
-  return markLibrary(fill(body, docs, await snippets()), "next", libraries, path).map(render);
+  // The links under this gallery's prefix, and the charts' data where the site keeps it (site.ts).
+  const site = siteFromEnv(process.env);
+  const own = withStreams(withBase(fill(body, docs, await snippets()), site.base), site.data);
+  return markLibrary(own, "next", libraries, path).map(render);
 }

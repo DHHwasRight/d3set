@@ -31,8 +31,8 @@ const parts: Docs["parts"] = {
         },
         {
           tag: "3 · Live",
-          title: "Updates over SSE",
-          text: "With `stream`, a chart follows server-sent events, such as an `sseResponse` route.",
+          title: "Live rows",
+          text: 'With `stream`, a hydrated chart follows new rows: server-sent events from an `sseResponse` route, or on a static host a JSON file polled with `transport: "poll"`.',
         },
       ],
     },

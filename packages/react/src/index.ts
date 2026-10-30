@@ -2,4 +2,4 @@
 export { Chart, type ChartProps } from "./Chart";
 export { Dashboard, type DashboardProps } from "./Dashboard";
 export { Hydrate, type HydrateProps } from "./Hydrate";
-export { useSseSource } from "./hooks";
+export { useSseSource, useStreamSource } from "./hooks";

@@ -60,8 +60,8 @@ function raw(node: RawNode, key: number): ReactNode {
 /**
  * One node. A chart replaces its exported `<figure>`: `<ServerChart>` renders the same figure
  * (`d3s-figure`, the theme's `data-d3s-theme` and custom properties) inside a `display: contents`
- * wrapper. Likewise for a dashboard's `d3s-root`. The live streams of the reference are left out:
- * the gallery has no live data, the rows are the ones the reference drew.
+ * wrapper. Likewise for a dashboard's `d3s-root`. The streams are the ones `withStreams` left:
+ * none in dev (the rows the reference drew), a polled JSON timeline on GitHub Pages.
  */
 export function render(node: Node, key = 0): ReactNode {
   if (typeof node === "string") return node;

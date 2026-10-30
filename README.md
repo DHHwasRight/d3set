@@ -147,6 +147,27 @@ Code snippets in the Rust gallery are highlighted on the server with [giallo](ht
 `rsx::grammar` and `jt::grammar`, the same grammars their VS Code extensions ship. Until those modules
 are pushed, `Cargo.toml` patches `rsx` and `jt` to the sibling checkouts `../templ` and `../jt`.
 
+### GitHub Pages
+
+The four galleries also build as one static site, for https://dhhwasright.github.io/d3set/:
+the Rust gallery at the root, the others under `vanilla/`, `react/` and `next/`.
+
+```sh
+npm run pages:build   # dist-pages/, for the GitHub Pages address
+npm run pages:serve   # http://localhost:4000/d3set/, rebuilds on change and reloads the browser
+```
+
+- The Rust gallery runs with `GALLERY_STATIC=1` and `GALLERY_BASE=/d3set`, and `gallery export`
+  writes it with [brocanth-static](https://github.com/DHHwasRight/brocanth/blob/main/docs/static-export.md):
+  each page as a document, one partial per layout depth under `partials/<depth>/`, and the feeds as
+  `data/<feed>.json` timelines.
+- Partial navigation reads those files: dp-swap gets `partialDir` and `base` from
+  `<meta name="dp-config">`. A static host cannot read the `DP-Partial` header.
+- The charts poll the timelines (`transport: "poll"`, see [Pull from a static file](#pull-from-a-static-file))
+  instead of following server-sent events.
+- `PAGES_URL` builds for another address. `pages:serve` builds for its own address, so the library
+  switch stays on the local server. `D3SET_PAGES=1 npm run e2e` tests the built site.
+
 Append `?js=off` to any page to see what the server sends. Rust 1.98 is pinned in `mise.toml`: rsx proc macros
 do not load across compiler versions.
 
@@ -173,6 +194,40 @@ sseSource({
 ```
 
 Updates are batched, so a burst of events gives one redraw.
+
+## Pull from a static file
+
+A static host (GitHub Pages, a bucket) cannot push events. `pollSource` fetches a JSON file
+instead. The file is a **timeline**: one message per frame, in the SSE payload format above.
+
+```json
+{ "interval": 2000, "frames": [[{ "id": 1, "value": 3 }], { "op": "upsert", "rows": [{ "id": 1, "value": 5 }] }] }
+```
+
+```ts
+pollSource({ url: "data/sales.json", mode: "upsert", key: "id", maxRows: 500 });
+```
+
+- The source applies one frame per `interval`, so the charts animate like with SSE. The file's
+  `interval` wins over the option (default 2000 ms).
+- The clock picks the frame (`floor(now / interval) % frames.length`), so every viewer sees the
+  same state.
+- At the end of each loop the source fetches the file again with `If-None-Match`. A 304 keeps the
+  frames. A new deploy of the file brings new frames.
+- `shift` makes each loop new data. Without it, the second loop sends the same rows again, and an
+  upsert by key changes nothing. With
+  `"shift": { "time": "at", "key": "id" }`, pass `j` (0 is the first pass since the page opened)
+  moves each `time` field forward by `j` loops (`interval × frames.length` ms). A number moves
+  as milliseconds, and an ISO string keeps its format. The `key` becomes unique to the pass: a
+  number moves past every key in the file, and a string gets `#j`. `time` can be a list of
+  fields.
+- A file without `frames` is one message. The source fetches it every `interval` and applies it
+  when it changes.
+- A relative `url` resolves against `document.baseURI`.
+
+A server-rendered payload selects it with `stream: { url, transport: "poll", interval }`
+(`Stream::new(url).poll().interval(ms)` in Rust). In React, `useStreamSource(stream)` picks the
+transport from the same option.
 
 ## Filters
 
@@ -281,5 +336,8 @@ registerChart("table", (el, spec, { theme }) => ({
 | `npm run format` | Prettier |
 | `npm run e2e` | Playwright against the built Rust gallery (installed Chrome): layout shift while loading, hydration parity, partial navigation, the library switch |
 | `D3SET_CONFORMITY=1 npm run e2e` | Also check that the vanilla, React and Next.js galleries draw the same pages as the Rust gallery (`D3SET_GALLERIES=vanilla,react` limits the run) |
+| `npm run pages:build` | The GitHub Pages site in `dist-pages/` (all four galleries) |
+| `npm run pages:serve` | Serve that site at http://localhost:4000/d3set/, rebuild on change, reload the browser |
+| `D3SET_PAGES=1 npm run e2e` | Also test the built GitHub Pages site |
 | `npm run build:browser` | `dist-browser/d3set.js`: one ES module with d3 included, for pages without a bundler |
 | `mise run gallery` | Build the browser bundle and serve the Rust gallery |

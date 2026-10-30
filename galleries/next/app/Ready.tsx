@@ -32,7 +32,7 @@ export function Ready() {
 }
 
 /** Keep the library switch's links on the page shown now (see `followLibrarySwitch`). */
-export function FollowLibrarySwitch({ bases }: { bases: Record<Library, string> }) {
-  useEffect(() => followLibrarySwitch(bases), [bases]);
+export function FollowLibrarySwitch({ bases, own }: { bases: Record<Library, string>; own: string }) {
+  useEffect(() => followLibrarySwitch(bases, own), [bases, own]);
   return null;
 }
