@@ -131,7 +131,19 @@ pub fn format(spec: &str, x: f64) -> String {
     Format::new(spec).format(x)
 }
 
+/// `a.toFixed(p)`. An exact tie (378.5 to 0 digits) rounds away from zero in JavaScript, but to
+/// even in Rust: on a tie, format the next float away from zero instead.
 fn fixed(a: f64, p: usize) -> String {
+    let exact = format!("{a:.1100}");
+    let tail = exact
+        .split_once('.')
+        .map_or("", |(_, f)| f.get(p..).unwrap_or(""));
+    let tie = tail.starts_with('5') && tail[1..].bytes().all(|b| b == b'0');
+    let a = if tie && a.is_finite() {
+        f64::from_bits(a.to_bits() + 1)
+    } else {
+        a
+    };
     format!("{a:.p$}")
 }
 
@@ -259,6 +271,14 @@ mod tests {
         assert_eq!(format(".3~s", 800.0), "800");
         assert_eq!(format(".3~s", 0.25), "250m");
         assert_eq!(format("$~s", 2_500_000.0), "$2.5M");
+    }
+
+    #[test]
+    fn fixed_ties_round_away_from_zero_like_to_fixed() {
+        assert_eq!(format(",.0f", 378.5), "379");
+        assert_eq!(format(",.0f", 2.5), "3");
+        assert_eq!(format(".1f", -0.25), "−0.3");
+        assert_eq!(format(".2f", 1.005), "1.00");
     }
 
     #[test]

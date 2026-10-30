@@ -1,13 +1,14 @@
 //! Shared x/y helpers for line, area, and timeseries: a port of `charts/xy.ts`
-//! (`toSeriesData`, `autoInterval`, `xScale`) and of `renderMarkers` in `charts/util.ts`.
+//! (`toSeriesData`, `autoInterval`, `xScale`) and of `renderMarkers`, `xyLook`, `xyMargin`, and
+//! `gradientId` in `charts/util.ts`.
 
 use crate::agg::{aggregate, by_name};
-use crate::axis::Scale;
-use crate::chart::{Ctx, Error};
+use crate::axis::{Edges, Look, Scale};
+use crate::chart::{Ctx, Error, Margin};
 use crate::format::Format;
-use crate::path::raw;
+use crate::path::{raw, Curve};
 use crate::scale::{Linear, Time};
-use crate::spec::{Agg, Level};
+use crate::spec::{Agg, Level, Spec};
 use crate::theme::Theme;
 use crate::time::{parse_iso, DAY, HOUR, MINUTE, SECOND, WEEK};
 use crate::value::Row;
@@ -206,6 +207,66 @@ pub fn y_scale(domain: [f64; 2], h: f64) -> Linear {
     Linear::new(domain, [h, 0.0]).nice(10.0)
 }
 
+/// TS `xyLook`: `ticks: "edges"` labels these x values (first and last), `valueAxis: "right"`.
+pub fn look_of(spec: &Spec, edges: impl FnOnce() -> Edges) -> Look {
+    Look {
+        edges: (spec.option_str("ticks") == Some("edges")).then(edges),
+        right: spec.option_str("valueAxis") == Some("right"),
+        none: spec.option_str("axes") == Some("none"),
+    }
+}
+
+/// TS `xyMargin`: without axes there is no margin. With the value axis on the right (and values on
+/// y), the space moves to the right.
+pub fn margin_of(spec: &Spec, base: Margin, value_on_x: bool) -> Margin {
+    if spec.option_str("axes") == Some("none") {
+        Margin {
+            top: 0.0,
+            right: 0.0,
+            bottom: 0.0,
+            left: 0.0,
+        }
+    } else if spec.option_str("valueAxis") == Some("right") && !value_on_x {
+        Margin {
+            left: 12.0,
+            right: 56.0,
+            ..base
+        }
+    } else {
+        base
+    }
+}
+
+/// `options.curve`: `linear`, else `curveMonotoneX`.
+pub fn curve_of(spec: &Spec) -> Curve {
+    if spec.option_str("curve") == Some("linear") {
+        Curve::Linear
+    } else {
+        Curve::MonotoneX
+    }
+}
+
+/// TS `fnv1a`: FNV-1a 32-bit over the UTF-16 code units of `s`, as 8 hex digits.
+pub fn fnv1a(s: &str) -> String {
+    let h = s.encode_utf16().fold(0x811c_9dc5_u32, |h, u| {
+        (h ^ u32::from(u)).wrapping_mul(0x0100_0193)
+    });
+    format!("{h:08x}")
+}
+
+/// TS `gradientId`: the id of the area gradient of series number `i` (in name order).
+pub fn gradient_id(spec: &Spec, i: usize) -> String {
+    let key = [
+        spec.kind.as_str(),
+        spec.title.as_deref().unwrap_or_default(),
+        spec.x.as_deref().unwrap_or_default(),
+        spec.y.as_deref().unwrap_or_default(),
+        spec.series.as_deref().unwrap_or_default(),
+    ]
+    .join("|");
+    format!("d3s-grad-{}-{i}", fnv1a(&key))
+}
+
 /// One threshold marker line, ready for the template.
 pub struct Marker {
     pub transform: String,
@@ -245,8 +306,13 @@ fn threshold_color(theme: &Theme, color: Option<&str>, level: Option<Level>) -> 
 /// The rendered chart: frame, axes, marks, markers, and a legend of every series key.
 pub struct Parts<'a> {
     pub height: f64,
+    pub margin: Margin,
+    /// `options.gradient`: the `<defs>` of the area gradients (present even when empty).
+    pub gradients: Option<&'a [crate::views::xy::Gradient]>,
     pub axes: &'a crate::axis::XYAxes,
     pub paths: &'a [crate::views::xy::PathMark],
+    /// Area top lines (`options.gradient`), in their own group after the marks.
+    pub lines: Option<&'a [crate::views::xy::PathMark]>,
     pub rects: &'a [crate::views::xy::RectMark],
     pub markers: &'a [Marker],
     pub keys: &'a [String],
@@ -258,8 +324,10 @@ pub fn finish(c: &Ctx, p: Parts<'_>) -> Result<crate::chart::Rendered, Error> {
         width: c.width,
         height: p.height,
         axes: p.axes,
-        margin: crate::chart::MARGIN,
+        margin: p.margin,
+        gradients: p.gradients,
         paths: p.paths,
+        lines: p.lines,
         rects: p.rects,
         markers: p.markers,
     })?;
@@ -300,5 +368,13 @@ mod tests {
         assert!(parse_interval("5").is_err());
         assert!(parse_interval("m").is_err());
         assert!(parse_interval("5x").is_err());
+    }
+
+    #[test]
+    fn fnv1a_like_ts() {
+        // FNV-1a 32-bit test vectors; UTF-16 units equal bytes for ASCII.
+        assert_eq!(fnv1a(""), "811c9dc5");
+        assert_eq!(fnv1a("a"), "e40c292c");
+        assert_eq!(fnv1a("foobar"), "bf9cf968");
     }
 }

@@ -1,8 +1,10 @@
 //! `timeseries`: values over time, as lines, areas, or stacked bars. Port of `charts/timeseries.ts`.
 //! Defaults: `interval: "auto"`, `aggregate: "sum"`, `display: "line"`.
 
-use super::xy::{finish, markers, max, min, to_series_data, y_scale, Parts, XScale};
-use crate::axis::xy_axes;
+use super::xy::{
+    finish, look_of, margin_of, markers, max, min, to_series_data, y_scale, Parts, XScale,
+};
+use crate::axis::{xy_axes_with, Edges};
 use crate::chart::{Ctx, Error, Rendered, MARGIN};
 use crate::color::SeriesColors;
 use crate::path::raw;
@@ -39,7 +41,8 @@ fn bars(c: &Ctx) -> Result<Rendered, Error> {
     let y_field = c.need("y")?;
     let fmt = c.fmt(".3~s");
     let height = c.height(240);
-    let (w, h) = c.inner(height, MARGIN);
+    let margin = margin_of(c.spec, MARGIN, false);
+    let (w, h) = c.inner(height, margin);
     let data = to_series_data(c, x_field, y_field)?;
     let x = XScale::new(&data, w);
     // Bar width: the bucket length, else the smallest gap between x values.
@@ -80,7 +83,16 @@ fn bars(c: &Ctx) -> Result<Rendered, Error> {
     let hi = if hi == 0.0 || hi.is_nan() { 1.0 } else { hi };
     let y = y_scale([lo, hi], h);
     let colors = SeriesColors::new(c.theme, &data.keys);
-    let axes = xy_axes(x.axis(), crate::axis::Scale::Linear(&y), w, h, &fmt, false);
+    let look = look_of(c.spec, || Edges::Num(Edges::of(&data.xs)));
+    let axes = xy_axes_with(
+        x.axis(),
+        crate::axis::Scale::Linear(&y),
+        w,
+        h,
+        &fmt,
+        false,
+        &look,
+    );
 
     let rects: Vec<RectMark> = bars
         .iter()
@@ -97,8 +109,11 @@ fn bars(c: &Ctx) -> Result<Rendered, Error> {
         c,
         Parts {
             height,
+            margin,
+            gradients: None,
             axes: &axes,
             paths: &[],
+            lines: None,
             rects: &rects,
             markers: &markers,
             keys: &data.keys,

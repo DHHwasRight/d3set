@@ -226,6 +226,14 @@ impl Spec {
         self
     }
 
+    /// An option as text: `typeof options.key === "string"`.
+    pub fn option_str(&self, key: &str) -> Option<&str> {
+        self.options
+            .iter()
+            .find(|(k, _)| k == key)
+            .and_then(|(_, v)| v.as_str())
+    }
+
     /// An option as a boolean: `options.sort === true`.
     pub fn flag(&self, key: &str) -> bool {
         self.options

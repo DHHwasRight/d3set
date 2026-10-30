@@ -131,6 +131,21 @@ impl Rendered {
 
 /// Render one chart.
 pub fn render(spec: &Spec, rows: &[Row], theme: &Theme, width: f64) -> Result<Rendered, Error> {
+    let kept;
+    let rows = match where_clause(spec)? {
+        Some((field, value)) => {
+            kept = rows
+                .iter()
+                .filter(|r| {
+                    let v = r.get(field);
+                    !v.is_null() && v.to_string() == value
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+            &kept[..]
+        }
+        None => rows,
+    };
     let ctx = Ctx {
         spec,
         rows,
@@ -138,4 +153,17 @@ pub fn render(spec: &Spec, rows: &[Row], theme: &Theme, width: f64) -> Result<Re
         width,
     };
     crate::charts::render(&ctx)
+}
+
+/// `options.where: "field=value"` (TS `rowFilter`): the chart reads only the rows where `field`
+/// is `value`, compared as text.
+fn where_clause(spec: &Spec) -> Result<Option<(&str, &str)>, Error> {
+    let Some((_, v)) = spec.options.iter().find(|(k, _)| k == "where") else {
+        return Ok(None);
+    };
+    v.as_str()
+        .and_then(|w| w.split_once('='))
+        .filter(|(f, _)| !f.is_empty())
+        .map(Some)
+        .ok_or_else(|| Error(format!("d3set: invalid where '{v}'. Use 'field=value'.")))
 }

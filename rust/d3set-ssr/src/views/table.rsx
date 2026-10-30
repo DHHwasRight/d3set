@@ -13,9 +13,11 @@ pub fn Table(head: &[Th], rows: &[Tr]) -> Element {
             <tbody>
                 for r in rows {
                     <tr { ...[("style", r.style)] }>
-                        for d in &r.cells {
+                        for (i, d) in r.cells.iter().enumerate() {
                             if d.link {
                                 <td style={d.style} class="d3s-cell-link">{d.text}</td>
+                            } else if let (0, Some(color)) = (i, r.swatch) {
+                                <td style={d.style}><i class="d3s-swatch" style={swatch_style(color)}></i>{d.text}</td>
                             } else {
                                 <td style={d.style}>{d.text}</td>
                             }
@@ -25,4 +27,8 @@ pub fn Table(head: &[Th], rows: &[Tr]) -> Element {
             </tbody>
         </table>
     </div>
+}
+
+fn swatch_style(color: &str) -> String {
+    format!("background: {color};")
 }

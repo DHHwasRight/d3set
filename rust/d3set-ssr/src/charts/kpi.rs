@@ -1,6 +1,8 @@
 //! `kpi`: a big number (the aggregate of `y`), colored by `thresholds`. With `x`, a trend line per
 //! x value and the change of the last x value against the one before. Port of `charts/kpi.ts`,
 //! with the single-series part of `toSeriesData` from `charts/xy.ts`.
+//! `options.value: "last"` (with `x`): the big number is the value of the last x point.
+//! `options.period: N` (with `x`): the big number and the delta use the last N points (see TS `kpiChart`).
 
 use crate::agg::{aggregate, extent};
 use crate::chart::{Ctx, Error, Rendered};
@@ -125,17 +127,40 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let how = c.aggregate(Agg::Sum);
     let height = c.height(if c.spec.x.is_some() { 120 } else { 72 });
     let fmt = c.fmt(",.0f");
-    let current = aggregate(
-        &c.rows.iter().map(|r| r.num(y_field)).collect::<Vec<_>>(),
-        how,
-    );
+    let pts = match c.spec.x.as_deref() {
+        Some(x_field) => points(c, x_field, y_field, how)?,
+        None => Vec::new(),
+    };
+    let last_point = c.spec.x.is_some() && c.spec.option_str("value") == Some("last");
+    let period = period_of(c);
+    // How the values of several points combine into one: a count of counts is their sum.
+    let combine = if how == Agg::Count { Agg::Sum } else { how };
+    let values: Vec<f64> = pts.iter().map(|p| p.1).collect();
+    let n = values.len();
+    // The value the big number is compared with, for the delta (with `period`).
+    let mut previous = None;
+    let current = match period {
+        Some(p) if last_point => {
+            previous = n.checked_sub(1 + p).map(|i| values[i]);
+            values.last().copied().unwrap_or(0.0)
+        }
+        Some(p) => {
+            let before = &values[n.saturating_sub(2 * p)..n.saturating_sub(p)];
+            previous = (!before.is_empty()).then(|| aggregate(before, combine));
+            aggregate(&values[n.saturating_sub(p)..], combine)
+        }
+        None if last_point => values.last().copied().unwrap_or(0.0),
+        None => aggregate(
+            &c.rows.iter().map(|r| r.num(y_field)).collect::<Vec<_>>(),
+            how,
+        ),
+    };
     let color = value_color(c.theme, current, &c.spec.thresholds);
 
     let mut trend = None;
     let mut delta = String::new();
     let mut direction = None;
-    if let Some(x_field) = c.spec.x.as_deref() {
-        let pts = points(c, x_field, y_field, how)?;
+    if c.spec.x.is_some() {
         let dom = |e: Option<[f64; 2]>| e.unwrap_or([f64::NAN, f64::NAN]);
         let x = Linear::new(dom(extent(pts.iter().map(|p| p.0))), [0.0, 100.0]);
         let y = Linear::new(dom(extent(pts.iter().map(|p| p.1))), [28.0, 2.0]);
@@ -145,14 +170,25 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
             line: line(&xy),
         });
 
-        if let [.., (_, prev), (_, last)] = pts[..] {
+        // Without `period`: the last point against the one before it.
+        let pair = match (period, &values[..]) {
+            (Some(_), _) => previous.map(|prev| (current, prev)),
+            (None, [.., prev, last]) => Some((*last, *prev)),
+            (None, _) => None,
+        };
+        if let Some((last, prev)) = pair {
             if prev != 0.0 {
                 let change = (last - prev) / prev.abs();
                 let up = change >= 0.0;
                 delta = format!(
-                    "{} {} vs previous",
+                    "{} {} {}",
                     if up { "▲" } else { "▼" },
-                    Format::new(".1%").format(change.abs())
+                    Format::new(".1%").format(change.abs()),
+                    if period.is_some() {
+                        "vs previous period"
+                    } else {
+                        "vs previous"
+                    }
                 );
                 direction = Some(if up { "up" } else { "down" });
             }
@@ -173,6 +209,15 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         style: " display: grid; grid-template-rows: auto auto 1fr;".into(),
         ..Default::default()
     })
+}
+
+/// `options.period`: a positive integer, read only with `x`.
+fn period_of(c: &Ctx) -> Option<usize> {
+    c.spec.x.as_ref()?;
+    match c.spec.options.iter().find(|(k, _)| k == "period")?.1 {
+        Value::Num(p) if p >= 1.0 && p.fract() == 0.0 && p.is_finite() => Some(p as usize),
+        _ => None,
+    }
 }
 
 /// `d3.line()` (linear curve).

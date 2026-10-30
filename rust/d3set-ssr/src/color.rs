@@ -137,25 +137,35 @@ pub fn text_on(fill: &str) -> &'static str {
     }
 }
 
-/// Series colors as the browser assigns them on a first render: keys in name order get the palette in order.
+/// Series colors as the browser assigns them on a first render: a key the theme names gets its
+/// fixed color; the other keys, in name order, get the palette in order.
 /// The TypeScript `stableColors` keeps these assignments when live data adds keys later.
 pub struct SeriesColors<'t> {
     keys: Vec<String>,
     palette: &'t [&'static str],
+    named: &'t [(&'static str, &'static str)],
 }
 
 impl<'t> SeriesColors<'t> {
     pub fn new(theme: &'t Theme, keys: &[String]) -> Self {
-        let mut keys = keys.to_vec();
+        let mut keys: Vec<String> = keys
+            .iter()
+            .filter(|k| !theme.named.iter().any(|(n, _)| n == k))
+            .cloned()
+            .collect();
         keys.sort_by(|a, b| crate::agg::by_name(a, b));
         keys.dedup();
         Self {
             keys,
             palette: theme.series,
+            named: theme.named,
         }
     }
 
     pub fn get(&self, key: &str) -> &'static str {
+        if let Some((_, c)) = self.named.iter().find(|(n, _)| *n == key) {
+            return c;
+        }
         let i = self
             .keys
             .iter()
@@ -168,6 +178,19 @@ impl<'t> SeriesColors<'t> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn named_series_keep_their_color_and_take_no_palette_slot() {
+        let theme = Theme {
+            named: &[("Churn", "#dc3309")],
+            ..crate::theme::LIGHT
+        };
+        let keys = ["New", "Churn", "Expansion"].map(String::from);
+        let colors = SeriesColors::new(&theme, &keys);
+        assert_eq!(colors.get("Churn"), "#dc3309");
+        assert_eq!(colors.get("Expansion"), theme.series[0]);
+        assert_eq!(colors.get("New"), theme.series[1]);
+    }
 
     #[test]
     fn lab_round_trips_and_interpolates_like_d3() {

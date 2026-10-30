@@ -244,7 +244,7 @@ fn corner_tangents(x0: f64, y0: f64, x1: f64, y1: f64, r1: f64, rc: f64, cw: boo
 }
 
 /// `d3.arc()` with `padAngle` and `cornerRadius`, as d3-shape 3 draws it (`digits(3)`).
-/// Angles in radians, clockwise from 12 o'clock. The negated comparisons keep d3's NaN behavior.
+/// Angles in radians, clockwise from 12 o'clock. The negated tests keep d3's NaN behavior.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub(crate) fn arc(
     inner: f64,

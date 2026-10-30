@@ -1,10 +1,12 @@
 //! `line`: one line per series over a time or numeric x axis. Port of `charts/line.ts`.
 
-use super::xy::{finish, markers, max, min, to_series_data, y_scale, Parts, XScale};
-use crate::axis::xy_axes;
+use super::xy::{
+    curve_of, finish, look_of, margin_of, markers, max, min, to_series_data, y_scale, Parts, XScale,
+};
+use crate::axis::{xy_axes_with, Edges};
 use crate::chart::{Ctx, Error, Rendered, MARGIN};
 use crate::color::SeriesColors;
-use crate::path::line;
+use crate::path::line_with;
 use crate::views::xy::PathMark;
 
 pub fn render(c: &Ctx) -> Result<Rendered, Error> {
@@ -12,7 +14,8 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let y_field = c.need("y")?;
     let fmt = c.fmt(".3~s");
     let height = c.height(240);
-    let (w, h) = c.inner(height, MARGIN);
+    let margin = margin_of(c.spec, MARGIN, false);
+    let (w, h) = c.inner(height, margin);
     let data = to_series_data(c, x_field, y_field)?;
     let x = XScale::new(&data, w);
     let all: Vec<f64> = data
@@ -28,7 +31,17 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         h,
     );
     let colors = SeriesColors::new(c.theme, &data.keys);
-    let axes = xy_axes(x.axis(), crate::axis::Scale::Linear(&y), w, h, &fmt, false);
+    let look = look_of(c.spec, || Edges::Num(Edges::of(&data.xs)));
+    let axes = xy_axes_with(
+        x.axis(),
+        crate::axis::Scale::Linear(&y),
+        w,
+        h,
+        &fmt,
+        false,
+        &look,
+    );
+    let curve = curve_of(c.spec);
 
     let paths: Vec<PathMark> = data
         .keys
@@ -41,11 +54,11 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
                 .filter_map(|(i, &xv)| data.get(i, k).map(|v| (x.map(xv), y.map(v))))
                 .collect();
             PathMark {
-                d: line(&pts),
+                d: line_with(&pts, curve),
                 fill: "none".into(),
                 fill_opacity: None,
                 stroke: colors.get(k).into(),
-                stroke_width: "2".into(),
+                stroke_width: Some("2".into()),
             }
         })
         .collect();
@@ -54,8 +67,11 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         c,
         Parts {
             height,
+            margin,
+            gradients: None,
             axes: &axes,
             paths: &paths,
+            lines: None,
             rects: &[],
             markers: &markers,
             keys: &data.keys,

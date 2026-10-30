@@ -74,6 +74,9 @@ pub fn translate(x: f64, y: f64) -> String {
 }
 
 pub fn AxisG(axis: &Axis) -> Element {
+    if axis.bare {
+        <g class={axis.class}></g>
+    } else {
     <g class={axis.class} { ...[("transform", axis.transform.as_deref())] } fill="none" font-size="10" font-family="sans-serif" text-anchor={axis.anchor()}>
         if axis.domain.is_some() {
             <path class="domain" stroke="currentColor" d={domain(axis)}></path>
@@ -82,7 +85,7 @@ pub fn AxisG(axis: &Axis) -> Element {
             <g class="tick" opacity="1" transform={&t.transform}>
                 if axis.orient == Orient::Bottom {
                     <line stroke="currentColor" y2={axis.line_end()}></line>
-                    <text fill="currentColor" y={axis.text_offset()} dy={axis.dy()}>{t.label}</text>
+                    <text fill="currentColor" y={axis.text_offset()} dy={axis.dy()} { ...[("text-anchor", t.anchor)] }>{t.label}</text>
                 } else {
                     <line stroke="currentColor" x2={axis.line_end()}></line>
                     <text fill="currentColor" x={axis.text_offset()} dy={axis.dy()}>{t.label}</text>
@@ -90,6 +93,7 @@ pub fn AxisG(axis: &Axis) -> Element {
             </g>
         }
     </g>
+    }
 }
 
 fn domain(axis: &Axis) -> &str {

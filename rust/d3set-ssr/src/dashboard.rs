@@ -76,6 +76,18 @@ impl Filter {
         }
     }
 
+    /// The label shown in the filter bar, in place of the title-cased field.
+    #[must_use]
+    pub fn labeled(mut self, text: &str) -> Self {
+        match &mut self {
+            Filter::Select { label, .. }
+            | Filter::Range { label, .. }
+            | Filter::Search { label, .. }
+            | Filter::DateRange { label, .. } => *label = text.into(),
+        }
+        self
+    }
+
     /// Fixed options for a select. Without them, options come from the data.
     #[must_use]
     pub fn options(mut self, values: &[&str]) -> Self {

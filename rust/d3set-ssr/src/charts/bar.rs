@@ -1,7 +1,9 @@
 //! `bar`: values per category, grouped or stacked, vertical or horizontal. Port of `charts/bar.ts`.
+//! `options.categories: "a|b|c"` fixes the categories and their order (`limit` is then ignored);
+//! `options.axes: "none"` draws no axes and no margin.
 
 use crate::agg::{aggregate, by_name, groups, rollup, top_n};
-use crate::axis::{xy_axes, Scale};
+use crate::axis::{xy_axes_with, Edges, Scale};
 use crate::chart::{Ctx, Error, LegendItem, Margin, Rendered, MARGIN};
 use crate::color::SeriesColors;
 use crate::path::raw;
@@ -35,7 +37,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let stacked = c.spec.stacked.unwrap_or(false);
     let fmt = c.fmt(".3~s");
     let height = c.height(240);
-    let margin = if horizontal {
+    let base = if horizontal {
         Margin {
             left: 88.0,
             ..MARGIN
@@ -43,11 +45,28 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     } else {
         MARGIN
     };
+    let margin = super::xy::margin_of(c.spec, base, horizontal);
     let (w, h) = c.inner(height, margin);
 
+    // Fixed categories: rows of other categories are left out.
+    let fixed = fixed_categories(c.spec);
+    let kept_rows: Vec<crate::value::Row>;
+    let rows = match &fixed {
+        Some(cats) => {
+            kept_rows = c
+                .rows
+                .iter()
+                .filter(|r| cats.contains(&r.text(x_field)))
+                .cloned()
+                .collect();
+            &kept_rows[..]
+        }
+        None => c.rows,
+    };
+
     // Keep the largest categories when `limit` is set. The others become "Other".
-    let kept: Option<Vec<String>> = c.spec.limit.map(|limit| {
-        let totals = rollup(c.rows, |r| r.text(x_field), y_field, how);
+    let kept: Option<Vec<String>> = c.spec.limit.filter(|_| fixed.is_none()).map(|limit| {
+        let totals = rollup(rows, |r| r.text(x_field), y_field, how);
         top_n(totals, Some(limit))
             .into_iter()
             .map(|(k, _)| k)
@@ -60,7 +79,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
             _ => k,
         }
     };
-    let nested: Vec<(String, Vec<(String, f64)>)> = groups(c.rows, cat_of)
+    let nested: Vec<(String, Vec<(String, f64)>)> = groups(rows, cat_of)
         .into_iter()
         .map(|(cat, list)| {
             let inner = groups(&list.into_iter().cloned().collect::<Vec<_>>(), |r| {
@@ -78,7 +97,10 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         })
         .collect();
 
-    let mut categories: Vec<String> = nested.iter().map(|(k, _)| k.clone()).collect();
+    let mut categories: Vec<String> = match &fixed {
+        Some(cats) => cats.clone(),
+        None => nested.iter().map(|(k, _)| k.clone()).collect(),
+    };
     let mut series_keys: Vec<String> = Vec::new();
     for (_, inner) in &nested {
         for (s, _) in inner {
@@ -89,7 +111,9 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     }
     series_keys.sort_by(|a, b| by_name(a, b));
     // Stable order, so bars do not move while live data slides: by value with `limit`, else by name.
-    if c.spec.limit.is_some() {
+    if fixed.is_some() {
+        // Fixed order: nothing to sort.
+    } else if c.spec.limit.is_some() {
         let total = |cat: &str| {
             nested
                 .iter()
@@ -171,10 +195,27 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let value = Linear::new([lo, hi], if horizontal { [0.0, w] } else { [h, 0.0] }).nice(10.0);
     let colors = SeriesColors::new(c.theme, &series_keys);
 
+    let look = super::xy::look_of(c.spec, || Edges::Band(Edges::of(&categories)));
     let axes = if horizontal {
-        xy_axes(Scale::Linear(&value), Scale::Band(&band), w, h, &fmt, true)
+        xy_axes_with(
+            Scale::Linear(&value),
+            Scale::Band(&band),
+            w,
+            h,
+            &fmt,
+            true,
+            &look,
+        )
     } else {
-        xy_axes(Scale::Band(&band), Scale::Linear(&value), w, h, &fmt, false)
+        xy_axes_with(
+            Scale::Band(&band),
+            Scale::Linear(&value),
+            w,
+            h,
+            &fmt,
+            false,
+            &look,
+        )
     };
     let rects = bars
         .iter()
@@ -230,4 +271,16 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         has_legend: true,
         ..Default::default()
     })
+}
+
+/// `options.categories: "a|b|c"` (TS `fixedCategories`): the fixed categories, in order, without repeats.
+fn fixed_categories(spec: &crate::spec::Spec) -> Option<Vec<String>> {
+    let list = spec.option_str("categories").filter(|s| !s.is_empty())?;
+    let mut out: Vec<String> = Vec::new();
+    for part in list.split('|') {
+        if !out.iter().any(|o| o == part) {
+            out.push(part.to_string());
+        }
+    }
+    Some(out)
 }

@@ -187,10 +187,43 @@ pub fn monotone_x(path: &mut Path, points: &[(f64, f64)], continue_line: bool) {
     }
 }
 
+/// `d3.curveLinear` through `points`: straight segments. With `continue_line`, as in `monotone_x`.
+pub fn linear(path: &mut Path, points: &[(f64, f64)], continue_line: bool) {
+    for (i, &(x, y)) in points.iter().enumerate() {
+        if i == 0 && !continue_line {
+            path.move_to(x, y);
+        } else {
+            path.line_to(x, y);
+        }
+    }
+}
+
+/// A d3-shape curve factory.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Curve {
+    #[default]
+    MonotoneX,
+    Linear,
+}
+
+impl Curve {
+    fn draw(self, path: &mut Path, points: &[(f64, f64)], continue_line: bool) {
+        match self {
+            Curve::MonotoneX => monotone_x(path, points, continue_line),
+            Curve::Linear => linear(path, points, continue_line),
+        }
+    }
+}
+
 /// `d3.line().curve(d3.curveMonotoneX)`.
 pub fn line(points: &[(f64, f64)]) -> String {
+    line_with(points, Curve::MonotoneX)
+}
+
+/// `d3.line().curve(curve)`. One point is `M x,y Z`, as both curves close a one-point line.
+pub fn line_with(points: &[(f64, f64)], curve: Curve) -> String {
     let mut p = Path::new();
-    monotone_x(&mut p, points, false);
+    curve.draw(&mut p, points, false);
     if points.len() == 1 {
         p.close();
     }
@@ -199,14 +232,19 @@ pub fn line(points: &[(f64, f64)]) -> String {
 
 /// `d3.area().curve(d3.curveMonotoneX)`: points are `(x, y0, y1)`.
 pub fn area(points: &[(f64, f64, f64)]) -> String {
+    area_with(points, Curve::MonotoneX)
+}
+
+/// `d3.area().curve(curve)`: the top line, then the baseline back, closed.
+pub fn area_with(points: &[(f64, f64, f64)], curve: Curve) -> String {
     if points.is_empty() {
         return String::new();
     }
     let mut p = Path::new();
     let top: Vec<(f64, f64)> = points.iter().map(|&(x, _, y1)| (x, y1)).collect();
     let base: Vec<(f64, f64)> = points.iter().rev().map(|&(x, y0, _)| (x, y0)).collect();
-    monotone_x(&mut p, &top, false);
-    monotone_x(&mut p, &base, true);
+    curve.draw(&mut p, &top, false);
+    curve.draw(&mut p, &base, true);
     p.close();
     p.finish()
 }
@@ -291,6 +329,18 @@ mod tests {
             "M0,0C3.333,5,6.667,10,10,10C13.333,10,16.667,5,20,0"
         );
         assert_eq!(line(&[(0.0, 0.0), (10.0, 10.0)]), "M0,0L10,10");
+    }
+
+    #[test]
+    fn linear_like_d3() {
+        // d3.line()([[0,0],[10,10],[20,0]]) and d3.area()([[0,5,1],[10,5,2]]) as (x, y0, y1)
+        let pts = [(0.0, 0.0), (10.0, 10.0), (20.0, 0.0)];
+        assert_eq!(line_with(&pts, Curve::Linear), "M0,0L10,10L20,0");
+        assert_eq!(line_with(&[(1.0, 2.0)], Curve::Linear), "M1,2Z");
+        assert_eq!(
+            area_with(&[(0.0, 5.0, 1.0), (10.0, 5.0, 2.0)], Curve::Linear),
+            "M0,1L10,2L10,5L0,5Z"
+        );
     }
 
     #[test]

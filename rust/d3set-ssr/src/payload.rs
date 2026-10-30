@@ -101,6 +101,12 @@ jt::template! {
 }
 
 jt::template! {
+    pub fn NamedJson(n: &[(&'static str, &'static str)]) -> Json {
+        ...n
+    }
+}
+
+jt::template! {
     /// The TypeScript `Theme`, so the browser draws with the server's tokens.
     pub fn ThemeJson(t: &Theme) -> Json {
         "name": t.name,
@@ -118,6 +124,7 @@ jt::template! {
             "negative": t.negative,
             "series": t.series,
             "sequential": t.sequential,
+            if !t.named.is_empty() { "named": NamedJson(t.named) }
         },
         "space": { "xs": 4, "sm": t.space_sm, "md": t.space_md, "lg": 24 },
         "radius": t.radius,

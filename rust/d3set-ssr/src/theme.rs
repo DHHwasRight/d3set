@@ -17,6 +17,8 @@ pub struct Theme {
     pub warning: &'static str,
     pub negative: &'static str,
     pub series: &'static [&'static str],
+    /// Fixed colors for series by name (TS `color.named`). Other series take `series` in order.
+    pub named: &'static [(&'static str, &'static str)],
     pub sequential: [&'static str; 2],
     pub space_sm: u32,
     pub space_md: u32,
@@ -43,6 +45,7 @@ pub const LIGHT: Theme = Theme {
     series: &[
         "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#a855f7", "#64748b",
     ],
+    named: &[],
     sequential: ["#eef2ff", "#3730a3"],
     space_sm: 8,
     space_md: 16,
