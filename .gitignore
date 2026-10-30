@@ -4,6 +4,25 @@ dist
 .DS_Store
 target
 dist-browser
-# Built by `npm run gallery:assets`.
-rust/gallery/assets/js/d3set.js
+# Built by `cargo build` (rust/gallery/build.rs) from the `_` inputs of assets/.
+rust/gallery/assets/js/gallery.js
+rust/gallery/assets/css/gallery.css
 rust/gallery/assets/css/d3set.css
+rust/gallery/public/js/chunks/
+# Playwright output.
+test-results/
+playwright-report/
+# Workspace packages and the Next.js example.
+packages/*/dist
+examples/next/.next
+examples/next/next-env.d.ts
+examples/next/tsconfig.tsbuildinfo
+# Framework galleries: exported from the Rust gallery (galleries/shared/scripts/export.mjs), and builds.
+galleries/shared/fixtures/
+galleries/shared/public/
+galleries/*/dist
+galleries/next/.next
+galleries/next/next-env.d.ts
+
+# Local build output, not part of the repository.
+rust/gallery/public/reference/
