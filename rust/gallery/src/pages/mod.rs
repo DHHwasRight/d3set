@@ -418,7 +418,7 @@ pub use brocanth_pages::html;
 /// parameter. A marker reading `/[section]` would be the same string on
 /// every section, and the client would conclude that two pages share a
 /// layer they do not.
-// Called by `html!` only for layouts under a parameter or with `Oob`; this app has none yet.
+// Called by `html!` only for a layout under a parameter; this app has none yet.
 #[allow(dead_code)]
 pub fn prefix(ctx: &Ctx, template: &str) -> String {
     let mut out = String::with_capacity(template.len());
@@ -442,8 +442,6 @@ pub fn prefix(ctx: &Ctx, template: &str) -> String {
 ///
 /// `html!` calls this once per layer it left out, and `render_with` puts
 /// the results in front of the page.
-// Called by `html!` only for layouts under a parameter or with `Oob`; this app has none yet.
-#[allow(dead_code)]
 pub fn render_oob(content: impl rsx::Template) -> Result<String, Error> {
     Ok(content.render_to_string()?)
 }
@@ -460,8 +458,6 @@ pub fn render_oob(content: impl rsx::Template) -> Result<String, Error> {
 /// client reads the whole body before it swaps anything, so the order is a
 /// convention rather than a requirement, and one convention is better than
 /// two.
-// Called by `html!` only for layouts under a parameter or with `Oob`; this app has none yet.
-#[allow(dead_code)]
 pub fn render_with(
     out_of_band: Vec<String>,
     content: impl rsx::Template,

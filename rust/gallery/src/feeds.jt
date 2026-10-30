@@ -1,0 +1,34 @@
+// The JSON of the feeds: the data endpoints, the stream frames, and the rows the pages embed.
+// Compiled into data.rs by `jt::load!`: no serializer runs at request time.
+
+pub fn RequestJson(r: &Request) -> Json {
+    "id": r.id,
+    "at": iso(r.at),
+    "host": &*r.host,
+    "service": r.service,
+    "region": r.region,
+    "latency": r.latency,
+    "status": r.status,
+    "errors": r.errors,
+    "level": r.level,
+    "check": r.check,
+    "message": r.message.as_str(),
+}
+
+pub fn SaleJson(s: &Sale) -> Json {
+    "id": s.id,
+    "at": iso(s.at),
+    "region": s.region,
+    "product": s.product,
+    "customer": s.customer,
+    "amount": s.amount,
+    "seats": s.seats,
+    "stage": s.stage,
+}
+
+pub fn RequestsJson(rows: &[&Request]) -> Json = [ for r in rows { RequestJson(r) } ];
+
+pub fn SalesJson(rows: &[&Sale]) -> Json = [ for s in rows { SaleJson(s) } ];
+
+// The first frame of a connection: a `replace` snapshot, or an `upsert` catch-up.
+pub fn Envelope(op: &str, rows: jt::Raw<'_>) -> Json { "op": op, "rows": rows }

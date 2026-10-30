@@ -2,7 +2,7 @@
 
 use crate::catalog::{entry, kinds, Entry};
 use crate::pages::{html, views, Ctx, Error, IntoResponse};
-use crate::site::{example, js_enabled, ExampleView};
+use crate::site::{example, js, ExampleView};
 
 pub struct Neighbor {
     pub href: String,
@@ -12,7 +12,7 @@ pub struct Neighbor {
 pub fn handle(ctx: &mut Ctx) -> Result<impl IntoResponse, Error> {
     let kind = ctx.require("kind")?.to_string();
     let entry: Entry = entry(&kind).ok_or_else(|| Error::new(404, "No such chart"))?;
-    let js = js_enabled(&ctx.query);
+    let js = js();
     let examples = entry
         .examples
         .iter()
@@ -24,5 +24,7 @@ pub fn handle(ctx: &mut Ctx) -> Result<impl IntoResponse, Error> {
     let neighbor = |k: &str| Neighbor { href: format!("/charts/{k}"), name: crate::catalog::entry(k).map_or("", |e| e.name) };
     let prev = (i > 0).then(|| neighbor(all[i - 1]));
     let next = all.get(i + 1).map(|k| neighbor(k));
-    html!(ctx, views::charts::_kind_::ChartPage { entry: &entry, examples: &examples, js, path: &ctx.path, prev: prev.as_ref(), next: next.as_ref() })
+    // The rsx template the server draws this chart with.
+    let template = d3set_ssr::sources::view(&kind).map(|src| crate::highlight::html(src, "rsx")).unwrap_or_default();
+    html!(ctx, views::charts::_kind_::ChartPage { entry: &entry, examples: &examples, template: &template, js, path: &ctx.path, prev: prev.as_ref(), next: next.as_ref() })
 }

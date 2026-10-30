@@ -17,7 +17,9 @@ pub struct FeedStream {
 pub fn subscribe(feed: &str, since: Option<f64>) -> Option<FeedStream> {
     let (first, rx) = crate::data::catch_up(feed, since)?;
     Some(FeedStream {
-        first: Some(first),
+        // With a fixed clock (`GALLERY_NOW`) nothing happens after the page: no catch-up either,
+        // so a hydrated page keeps exactly the rows it was rendered with.
+        first: crate::data::FROZEN.is_none().then_some(first),
         rx,
         closing: false,
         closed: false,

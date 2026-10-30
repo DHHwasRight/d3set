@@ -43,7 +43,7 @@ pub const GROUPS: &[Group] = &[
         kinds: &["timeseries", "line", "area"],
     },
     Group {
-        name: "Comparison",
+        name: "Categories",
         kinds: &["bar", "toplist", "change", "table"],
     },
     Group {
@@ -182,7 +182,7 @@ pub fn entry(kind: &str) -> Option<Entry> {
             ex("Request log", "Host as a tag.", Ops, Spec::new("stream").x("at").y("message").series("level").columns(vec![Column::new("host")]).limit(60)),
         ]),
         "note" => e("note", "Note", "Static text that explains a dashboard. It reads no data.", vec![
-            ex("About this dashboard", "Blank lines split paragraphs.", Ops, Spec::new("note").text("Request logs from 24 hosts, pushed with server-sent events.\n\nWarning above 250 ms, critical above 500 ms.")),
+            ex("About this dashboard", "Blank lines split paragraphs.", Ops, Spec::new("note").text("Request logs from 24 hosts.\n\nWarning above 250 ms, critical above 500 ms.")),
         ]),
         _ => return None,
     })

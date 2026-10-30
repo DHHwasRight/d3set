@@ -1,7 +1,9 @@
-// The shell: top bar, navigation, and the content column. Documentation-style layout.
+// Layer 1, the shell: top bar, navigation, and the outlet `#app` every page swaps into.
 
 use crate::catalog::{entry, GROUPS};
+use crate::libraries::{links, CURRENT};
 use crate::pages::TITLE;
+use crate::site::{js, swap_ring_attrs};
 
 pub fn Layout(layout: &str, path: &str, children: Element) -> Element {
     <!DOCTYPE html>
@@ -14,44 +16,97 @@ pub fn Layout(layout: &str, path: &str, children: Element) -> Element {
             <link rel="stylesheet" href={crate::assets::url("css/d3set.css")}>
             <link rel="stylesheet" href={crate::assets::url("css/gallery.css")}>
         </head>
-        <body data-layout={layout}>
+        // `dp-boost` makes every link a partial navigation into `#app`.
+        <body dp-boost dp-target="#app" { ...swap_ring_attrs() }>
             <header class="top">
                 <a class="brand" href="/"><span class="brand-mark"></span>{TITLE}</a>
-                <nav class="top-nav">
-                    <a href="/" class={top_class(path, "/")}>Overview</a>
-                    <a href="/charts/timeseries" class={top_class(path, "/charts")}>Charts</a>
-                    <a href="/dashboards/ops" class={top_class(path, "/dashboards")}>Dashboards</a>
-                    <a href="/guide" class={top_class(path, "/guide")}>Guide</a>
-                </nav>
+                <TopNav path={path} oob={false} />
                 <div class="top-search"><span>Search the gallery</span><kbd>/</kbd></div>
+                <LibrarySwitch path={path} oob={false} />
             </header>
             <div class="shell">
                 <aside class="side">
-                    <nav>
-                        <div class="side-group">
-                            <div class="side-title">Get started</div>
-                            <a href="/" class={side_class(path, "/")}>Overview</a>
-                            <a href="/guide" class={side_class(path, "/guide")}>Server rendering</a>
-                        </div>
-                        <div class="side-group">
-                            <div class="side-title">Dashboards</div>
-                            <a href="/dashboards/ops" class={side_class(path, "/dashboards/ops")}>Observability</a>
-                            <a href="/dashboards/sales" class={side_class(path, "/dashboards/sales")}>Business</a>
-                        </div>
-                        for group in GROUPS {
-                            <div class="side-group">
-                                <div class="side-title">{group.name}</div>
-                                for kind in group.kinds.iter() {
-                                    <a href={chart_href(kind)} class={side_class(path, &chart_href(kind))}>{chart_name(kind)}</a>
-                                }
-                            </div>
-                        }
-                    </nav>
+                    <SideNav path={path} oob={false} />
                 </aside>
-                <main class="main">{children}</main>
+                // The marker is on the outlet: a swap replaces its children, so the shell stays.
+                <main id="app" class="main" dp-layout={layout}>{children}</main>
             </div>
+            if js() {
+                <script src="/dpswap.min.js"></script>
+                <script type="module" src={crate::assets::url("js/gallery.js")}></script>
+            }
         </body>
     </html>
+}
+
+// ------------------------------------------------------------ out of band
+//
+// A partial does not contain the shell, so the parts of it that depend on the path go stale.
+// `html!` sends this with a partial that keeps only this layer; the client applies each element
+// by id. A section layout that is kept sends its own `Oob` instead.
+
+pub fn Oob(path: &str) -> Element {
+    <TopNav path={path} oob={true} />
+    <LibrarySwitch path={path} oob={true} />
+    <SideNav path={path} oob={true} />
+}
+
+pub fn TopNav(path: &str, oob: bool) -> Element {
+    <nav class="top-nav" id="top-nav" { ...oob_attrs(oob) }>
+        <a href="/" class={top_class(path, "/")}>Overview</a>
+        <a href="/charts/timeseries" class={top_class(path, "/charts")}>Charts</a>
+        <a href="/dashboards/ops" class={top_class(path, "/dashboards")}>Dashboards</a>
+        <a href="/guide" class={top_class(path, "/guide")}>Guide</a>
+    </nav>
+}
+
+// The same page drawn by each binding, each on its own server: not boosted. The links name the
+// current path; `_src/library-switch.js` keeps them right when only `#app` changed.
+pub fn LibrarySwitch(path: &str, oob: bool) -> Element {
+    <nav class="library-switch" id="library-switch" aria-label="Library" { ...oob_attrs(oob) }>
+        for (library, href) in links(path) {
+            <a href={href} data-library={library.id} dp-boost="false" { ...current_attr(library.id) }>{library.name}</a>
+        }
+    </nav>
+}
+
+pub fn SideNav(path: &str, oob: bool) -> Element {
+    <nav id="side-nav" { ...oob_attrs(oob) }>
+        <div class="side-group">
+            <div class="side-title">Get started</div>
+            <a href="/" class={side_class(path, "/")}>Overview</a>
+            <a href="/guide" class={side_class(path, "/guide")}>Getting started</a>
+        </div>
+        <div class="side-group">
+            <div class="side-title">Dashboards</div>
+            <a href="/dashboards/ops" class={side_class(path, "/dashboards/ops")}>Observability</a>
+            <a href="/dashboards/sales" class={side_class(path, "/dashboards/sales")}>Business</a>
+        </div>
+        for group in GROUPS {
+            <div class="side-group">
+                <div class="side-title">{group.name}</div>
+                for kind in group.kinds.iter() {
+                    <a href={chart_href(kind)} class={side_class(path, &chart_href(kind))}>{chart_name(kind)}</a>
+                }
+            </div>
+        }
+        <div class="side-group">
+            <div class="side-title">Analytics</div>
+            <a href="/analytics" class={prefix_class(path, "/analytics")}>Billing</a>
+        </div>
+    </nav>
+}
+
+fn prefix_class(path: &str, prefix: &str) -> &'static str {
+    if path == prefix || path.starts_with(&format!("{prefix}/")) { "side-link is-current" } else { "side-link" }
+}
+
+fn oob_attrs(oob: bool) -> Option<(&'static str, &'static str)> {
+    oob.then_some(("dp-swap-oob", "outerHTML"))
+}
+
+fn current_attr(id: &str) -> Option<(&'static str, &'static str)> {
+    (id == CURRENT).then_some(("aria-current", "page"))
 }
 
 fn chart_href(kind: &str) -> String {

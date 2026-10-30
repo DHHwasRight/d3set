@@ -5,8 +5,7 @@ use d3set_ssr::{Agg, Dashboard, Filter, Spec};
 
 use crate::catalog::Feed;
 use crate::pages::{html, views, Ctx, Error, IntoResponse};
-use crate::site::{js_enabled, rows, stream, DASHBOARD};
-use crate::theme::GALLERY;
+use crate::site::{js, rows, stream, DASHBOARD};
 
 fn latency() -> Vec<Threshold> {
     vec![Threshold::new(">", 500.0, Level::Critical), Threshold::new(">", 250.0, Level::Warning)]
@@ -32,12 +31,12 @@ fn dashboard(name: &str) -> Option<(&'static str, &'static str, Feed, Dashboard)
             Spec::new("status").title("Host checks").x("host").y("check").series("at").span(2),
             Spec::new("sunburst").title("Requests, region › service").x("service").series("region").y("id").aggregate(Agg::Count),
             Spec::new("stream").title("Log stream").x("at").y("message").series("level").columns(vec![Column::new("host")]).limit(80).span(2),
-            Spec::new("note").title("About").text("Request logs from 24 hosts, rendered on the server, then live over server-sent events.\n\nWarning above 250 ms, critical above 500 ms."),
+            Spec::new("note").title("About").text("Request logs from 24 hosts.\n\nWarning above 250 ms, critical above 500 ms."),
         ],
         filters: vec![Filter::multi_select("service"), Filter::select("region"), Filter::select("host"), Filter::search("message")],
         time_field: Some("at".into()),
         time_window: Some("15m".into()),
-        theme: &GALLERY,
+        theme: &crate::theme::GALLERY,
         width: DASHBOARD,
         ..Default::default()
     };
@@ -58,7 +57,7 @@ fn dashboard(name: &str) -> Option<(&'static str, &'static str, Feed, Dashboard)
         ],
         filters: vec![Filter::multi_select("region"), Filter::select("product"), Filter::range("amount"), Filter::search("customer")],
         time_field: Some("at".into()),
-        theme: &GALLERY,
+        theme: &crate::theme::GALLERY,
         width: DASHBOARD,
         ..Default::default()
     };
@@ -71,14 +70,16 @@ fn dashboard(name: &str) -> Option<(&'static str, &'static str, Feed, Dashboard)
 
 pub fn handle(ctx: &mut Ctx) -> Result<impl IntoResponse, Error> {
     let name = ctx.require("name")?.to_string();
-    let (title, lead, feed, mut d) = dashboard(&name).ok_or_else(|| Error::new(404, "No such dashboard"))?;
-    let js = js_enabled(&ctx.query);
+    let (title, lead, feed, _) = dashboard(&name).ok_or_else(|| Error::new(404, "No such dashboard"))?;
+    let js = js();
     let mut data = rows(feed, if feed == Feed::Ops { 4000 } else { 2000 });
     if feed == Feed::Ops {
         // The dashboard opens on a 15-minute window: embed only what it shows.
         let since = crate::data::now() - 15.0 * 60_000.0;
         data.retain(|r| r.get("at").as_str().and_then(d3set_ssr::time::parse_iso).is_some_and(|t| t >= since));
     }
+    let (_, _, _, mut d) = dashboard(&name).ok_or_else(|| Error::new(404, "No such dashboard"))?;
+    d.width = DASHBOARD;
     if js {
         d.stream = Some(stream(feed, &data, data.len()));
     }

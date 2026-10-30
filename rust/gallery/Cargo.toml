@@ -15,3 +15,9 @@ brocanth-pages = { path = "../../../brocanth/crates/brocanth-pages" }
 brocanth-assets = { path = "../../../brocanth/crates/brocanth-assets" }
 brocanth-server = { path = "../../../brocanth/crates/brocanth-server" }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "macros"] }
+# Code highlighting with TextMate grammars and VS Code themes, the same output as the editor.
+giallo = { version = "0.5", features = ["dump"] }
+
+[build-dependencies]
+# The JS and CSS bundles of assets/, built by build.rs: rolldown and Lightning CSS.
+brocanth-bundle = { path = "../../../brocanth/crates/brocanth-bundle" }

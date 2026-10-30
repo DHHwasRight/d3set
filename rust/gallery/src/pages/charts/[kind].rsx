@@ -1,34 +1,46 @@
 use crate::catalog::Entry;
 use crate::pages::charts::_kind_::Neighbor;
-use crate::site::{boot_script, inline_code, ExampleView};
+use crate::site::{inline_code, ExampleView};
 
-pub fn ChartPage(entry: &Entry, examples: &[ExampleView], js: bool, path: &str, prev: Option<&Neighbor>, next: Option<&Neighbor>) -> Element {
+pub fn ChartPage(entry: &Entry, examples: &[ExampleView], template: &str, js: bool, path: &str, prev: Option<&Neighbor>, next: Option<&Neighbor>) -> Element {
     <article class="page">
         <div class="eyebrow">Charts · <code>{entry.kind}</code></div>
         <h1>{entry.name}</h1>
         <p class="lead">{!inline_code(entry.summary)}</p>
-        <div class="callout">
+        <div class="callout" data-snippet="mode">
             if js {
                 <span class="badge badge-live">Live</span>
                 Rendered on the server, then hydrated and fed over SSE.
-                <a href={off_href(path)}>View without JavaScript</a>
+                <a href={off_href(path)} dp-boost="false">View without JavaScript</a>
             } else {
                 <span class="badge">Static</span>
                 What the server sends: SVG and HTML, no script.
-                <a href={path}>Turn JavaScript back on</a>
+                <a href={path} dp-boost="false">Turn JavaScript back on</a>
             }
         </div>
         for ex in examples {
             <section class="example">
                 <h2>{ex.title}</h2>
-                <p class="muted">{!inline_code(ex.note)} <span class="feed">feed: <code>{ex.feed}</code></span></p>
+                <p class="muted">{!inline_code(ex.note)} <span class="feed" data-snippet="feed">feed: <code>{ex.feed}</code></span></p>
                 <div class="figure">{!ex.html}</div>
                 <details class="code">
-                    <summary>Spec</summary>
-                    <pre><code>{ex.spec_json}</code></pre>
+                    <summary>Spec <span class="lang">JSON</span></summary>
+                    {!ex.spec_html}
                 </details>
             </section>
         }
+        <div data-snippet="chart">
+            if !template.is_empty() {
+                <section class="example">
+                    <h2>Server template</h2>
+                    <p class="muted">The rsx template <code>d3set-ssr</code> renders this chart with. It receives the scales, ticks, and marks already computed in Rust.</p>
+                    <details class="code" open>
+                        <summary>Template <span class="lang">rsx</span></summary>
+                        {!template}
+                    </details>
+                </section>
+            }
+        </div>
         <nav class="pager">
             if prev.is_some() {
                 <a class="pager-prev" href={prev_href(prev)}><span>Previous</span>{prev_name(prev)}</a>
@@ -39,9 +51,6 @@ pub fn ChartPage(entry: &Entry, examples: &[ExampleView], js: bool, path: &str, 
                 <a class="pager-next" href={prev_href(next)}><span>Next</span>{prev_name(next)}</a>
             }
         </nav>
-        if js {
-            <script type="module">{!boot_script()}</script>
-        }
     </article>
 }
 

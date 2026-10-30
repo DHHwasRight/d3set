@@ -1,0 +1,183 @@
+/* The gallery: a documentation layout. Ink text, a blurple accent, quiet borders. */
+
+:root {
+  --ink: #0a2540;
+  --text: #425466;
+  --muted: #697386;
+  --line: #e6ebf1;
+  --stage: #f6f9fc;
+  --accent: #635bff;
+  --accent-soft: #efedff;
+  --code-bg: #0a2540;
+  --code-text: #e6ebf1;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 15px/24px var(--font); color: var(--text); background: #fff; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { font-family: var(--mono); font-size: 0.88em; color: var(--ink); background: var(--stage); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+/* Top bar */
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 32px; height: 64px; padding: 0 24px; background: rgb(255 255 255 / 0.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--ink); letter-spacing: -0.01em; }
+.brand:hover { text-decoration: none; }
+.brand-mark { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, #635bff 0%, #00a8e8 100%); }
+.top-nav { display: flex; gap: 22px; font-size: 14px; font-weight: 500; }
+.top-nav a { color: var(--text); padding: 20px 0; border-bottom: 2px solid transparent; }
+.top-nav a:hover { color: var(--ink); text-decoration: none; }
+.top-nav a.is-current { color: var(--accent); border-bottom-color: var(--accent); }
+.top-search { margin-left: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 240px; padding: 6px 10px; font-size: 13px; color: var(--muted); background: var(--stage); border: 1px solid var(--line); border-radius: 6px; }
+.top-search kbd { font: 11px var(--mono); padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+
+/* Shell */
+.shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+.side { position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; padding: 24px 16px 48px 24px; border-right: 1px solid var(--line); }
+.side-group { margin-bottom: 22px; }
+.side-title { margin: 0 0 6px 8px; line-height: 16px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); }
+.side-link { display: block; padding: 4px 8px; line-height: 22px; font-size: 14px; color: var(--text); border-radius: 6px; }
+.side-link:hover { color: var(--ink); background: var(--stage); text-decoration: none; }
+.side-link.is-current { color: var(--accent); font-weight: 500; background: var(--accent-soft); }
+.main { min-width: 0; padding: 40px 48px 96px; }
+
+/* Page */
+.page { max-width: 760px; }
+.page-wide { max-width: 1080px; }
+.eyebrow { line-height: 20px; font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
+.eyebrow code { font-size: 12px; }
+h1 { margin: 0 0 12px; font-size: 32px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+h2 { margin: 40px 0 8px; line-height: 28px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+h3 { margin: 0 0 4px; line-height: 24px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.lead { margin: 0 0 24px; font-size: 18px; line-height: 28px; color: var(--text); }
+/* Margins in px, not the default 1em: font sizes differ by style, spacing must not. */
+:where(.page) p { margin: 15px 0; }
+.muted { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 22px; }
+.feed { margin-left: 8px; color: var(--muted); }
+
+.callout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 8px; padding: 12px 16px; font-size: 14px; line-height: 22px; background: var(--stage); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); }
+.callout a { margin-left: auto; font-weight: 500; }
+.badge { display: inline-block; padding: 1px 8px; font-size: 12px; font-weight: 600; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; }
+.badge-live { color: #0e8a5f; border-color: #b7e4d3; background: #edfaf4; }
+.badge-live::before { content: "● "; }
+
+/* Examples */
+.example h2 { margin-top: 36px; }
+.figure { padding: 24px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 1px 2px rgb(10 37 64 / 0.04); }
+.figure figure { margin: 0; }
+details.code { margin-top: 10px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+details.code summary { cursor: pointer; padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--stage); }
+details.code pre, pre.block { margin: 0; padding: 16px 18px; overflow-x: auto; font: 13px/1.6 var(--mono); color: var(--code-text); background: var(--code-bg); }
+pre.block { border-radius: var(--radius); margin: 12px 0 8px; }
+details.code pre code, pre.block code { color: inherit; background: none; border: 0; padding: 0; font-size: inherit; }
+
+.pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line); }
+.pager a { display: grid; gap: 2px; padding: 12px 16px; min-width: 200px; font-weight: 600; color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); }
+.pager a:hover { border-color: var(--accent); text-decoration: none; }
+.pager span { font-size: 12px; font-weight: 500; color: var(--muted); }
+.pager-next { text-align: right; margin-left: auto; }
+
+/* Overview */
+.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 8px 0 8px; }
+.mode { padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
+.mode p { margin: 0; font-size: 14px; }
+.mode-tag { font: 600 12px var(--mono); color: var(--accent); margin-bottom: 6px; }
+.section-title { margin-top: 40px; }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.page:has(.thumbs) { max-width: 1080px; }
+.thumb { display: grid; grid-template-rows: auto 1fr; color: inherit; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s; }
+.thumb:hover { text-decoration: none; border-color: #c9c5ff; box-shadow: 0 4px 16px rgb(99 91 255 / 0.1); }
+.thumb-chart { padding: 16px 16px 8px; height: 196px; overflow: hidden; pointer-events: none; }
+.thumb-chart figure { margin: 0; }
+.thumb-chart .d3s-legend { display: none; }
+.thumb-text { display: grid; gap: 2px; padding: 12px 16px 14px; line-height: 20px; border-top: 1px solid var(--line); background: var(--stage); font-size: 13px; }
+.thumb-text strong { color: var(--ink); font-size: 14px; }
+
+/* Dashboards: d3set cards on the page stage. */
+.dashboard { margin-top: 24px; }
+.dashboard .d3s-card { border: 1px solid var(--line); box-shadow: 0 1px 2px rgb(10 37 64 / 0.04); }
+
+@media (max-width: 960px) {
+  .shell { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .main { padding: 24px 16px 64px; }
+  .top-nav, .top-search { display: none; }
+  .modes { grid-template-columns: 1fr; }
+}
+
+/* Highlighted code (giallo, night-owl): colors are inline, layout is here. */
+pre.giallo { margin: 0; padding: 16px 18px; overflow-x: auto; font: 13px/21px var(--mono); tab-size: 4; }
+pre.giallo code { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+.block { margin: 12px 0 8px; border-radius: var(--radius); overflow: hidden; }
+details.code pre.giallo { border-radius: 0; }
+details.code summary .lang { margin-left: 6px; font: 600 11px var(--mono); color: var(--muted); text-transform: uppercase; }
+
+/* Library switch: the same page in each binding. The current one changes colors only, so the
+   switch has the same size in every gallery. */
+.library-switch { display: flex; align-items: center; gap: 2px; padding: 3px; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; }
+.library-switch a { padding: 3px 10px; color: var(--text); border-radius: 6px; white-space: nowrap; }
+.library-switch a:hover { text-decoration: none; background: var(--stage); }
+.library-switch a[aria-current="page"] { color: #fff; background: var(--accent); }
+
+/* Inline code does not stretch a line: monospace fonts have taller ascents than the text around them. */
+:where(p, .eyebrow, .lead, .muted, .callout, td, li) code { line-height: 1; }
+
+/* The KPI number has a fixed line box, so a different font size or family does not change the card height. */
+.d3s-kpi-value { line-height: 44px; }
+
+/* Swap ring (GALLERY_SWAP_RING=1): outline the region dp-swap just replaced. gallery.js adds
+ * `.is-swapped` after a swap. An outline with an offset, so nothing moves. */
+body[data-swap-ring] .is-swapped {
+  border-radius: 8px;
+  animation: swap-ring 700ms ease-out;
+}
+@keyframes swap-ring {
+  0%   { outline: 1.5px solid var(--accent); outline-offset: 8px; }
+  60%  { outline: 1.5px solid var(--accent); outline-offset: 8px; }
+  100% { outline: 1.5px solid transparent; outline-offset: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-swap-ring] .is-swapped { animation: none; }
+}
+
+/* Analytics: flat sections on white, each a big number with its change, a 232px chart, and a
+   breakout table.
+
+   Tabs: 36px tabs with 8px padding and 12px corners in a 52px bar
+   with a bottom divider; the selected tab has a 2px underline on the divider. The views of a tab
+   use the same tabs, one row below. Tabs are links: a tab change is a partial navigation. */
+.analytics { max-width: 960px; }
+.analytics .tabs { margin-top: 24px; }
+.tabs-row { display: flex; gap: 8px; min-height: 52px; align-items: center; box-shadow: 0 -1px 0 0 var(--line) inset; overflow-x: auto; }
+.tab, .tab-pill { position: relative; display: flex; align-items: center; height: 36px; padding: 0 8px; font-size: 14px; font-weight: 500; line-height: 20px; color: var(--muted); white-space: nowrap; border-radius: 12px; }
+.tab:hover, .tab-pill:hover { color: var(--ink); background: var(--stage); text-decoration: none; }
+.tab[aria-selected="true"], .tab-pill[aria-selected="true"] { color: var(--accent); }
+.tab[aria-selected="true"]::after, .tab-pill[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -8px; height: 2px; background: currentColor; }
+.tabs-pills { margin-top: 0; }
+
+/* Sections: flat on white, 104px under the last one. */
+.tab-panel { margin-top: 24px; padding-bottom: 104px; }
+.tab-panel .dashboard { margin-top: 0; }
+.tab-panel .d3s-root { background: transparent; gap: 24px; }
+.tab-panel .d3s-grid { row-gap: 24px; }
+.analytics .tab-panel .dashboard .d3s-card { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
+.analytics .tab-panel .dashboard .d3s-card h3 { margin: 0 0 8px; font-size: 18px; line-height: 24px; font-weight: 600; }
+.tab-panel .d3s-kpi-value { font-size: 24px; line-height: 32px; font-weight: 600; }
+.tab-panel .d3s-kpi-delta { font-size: 14px; line-height: 24px; }
+.tab-panel .d3s-kpi-trend { display: none; }
+.analytics .d3s-table th { height: 40px; padding: 0 32px 0 4px; font-size: 14px; font-weight: 500; }
+.analytics .d3s-table td { height: 48px; padding: 0 32px 0 4px; font-size: 14px; }
+.analytics .d3s-table th, .analytics .d3s-table td { white-space: nowrap; }
+.analytics .d3s-table th:last-child, .analytics .d3s-table td:last-child { padding-right: 0; }
+
+/* Filters: one 32px pill per filter ("Currency" then its value). */
+.tab-panel .d3s-filters { gap: 12px; align-items: center; padding: 0; background: none; }
+.tab-panel .d3s-filter { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; font-size: 14px; font-weight: 500; border-radius: 100px; background: var(--stage); }
+.tab-panel .d3s-filter input, .tab-panel .d3s-filter select { height: 24px; padding: 0 2px; font-size: 14px; border: 0; background: transparent; }
+.tab-panel .d3s-filter-reset { height: 32px; padding: 0 12px; font-size: 14px; border-radius: 8px; }
+
+/* The sample data is not live: no connection status. */
+.tab-panel .d3s-status { display: none; }

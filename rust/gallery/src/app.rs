@@ -153,6 +153,17 @@ fn holding(request: &brocanth_server::Request) -> u32 {
 pub fn serve(addr: &str) -> Result<(), String> {
     let app = Arc::new(build()?);
     eprintln!("{APP}: plugins: [{}]", app.plugins.join(", "));
+    // Read `GALLERY_SWAP_RING` now, once, rather than on the first page.
+    if *crate::site::SWAP_RING {
+        eprintln!("{APP}: swap ring on");
+    }
+    if let Some(t) = *crate::data::FROZEN {
+        eprintln!("{APP}: clock fixed at {} (GALLERY_NOW), live feeds paused", d3set_ssr::time::iso(t));
+    }
+    // `GALLERY_LIBRARIES`: a bad value stops here, before the server binds.
+    if let Err(message) = &*crate::libraries::BASES {
+        return Err(message.clone());
+    }
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -175,7 +186,12 @@ pub fn serve(addr: &str) -> Result<(), String> {
                 // response and nothing borrowed.
                 let out = serve_asset(&request)
                     .or_else(|| serve_events(&request))
-                    .unwrap_or_else(|| sent(dispatch(&app, &request)));
+                    .unwrap_or_else(|| {
+                        let js = crate::site::js_enabled(&request.query);
+                        let answered = crate::site::with_js(js, || dispatch(&app, &request));
+                        // One URL answers a document or a partial, chosen by `DP-Partial`.
+                        sent(answered).with_header("vary", "DP-Partial")
+                    });
                 async move { out }
             })
             .await

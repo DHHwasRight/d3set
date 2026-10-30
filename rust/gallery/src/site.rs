@@ -1,13 +1,13 @@
-//! What every page shares: widths, the hydration script, and how an example becomes markup.
+//! What every page shares: widths, the JavaScript switch, and how an example becomes markup.
+
+use std::cell::Cell;
+use std::sync::LazyLock;
 
 use d3set_ssr::payload::SpecJson;
-use d3set_ssr::{figure, static_figure, Row, Spec, Stream};
+use d3set_ssr::{static_figure, Row, Spec};
 
 use crate::catalog::{Example, Feed};
-use crate::theme::GALLERY;
 
-/// Chart width in the content column: 760px column, minus figure padding (20px) and border (1px) on both sides.
-pub const PAGE_CHART: f64 = 718.0;
 /// A dashboard spans the wide content column.
 pub const DASHBOARD: f64 = 1080.0;
 /// Rows embedded per example: enough history to draw, small enough to keep pages light.
@@ -18,12 +18,31 @@ pub fn js_enabled(query: &str) -> bool {
     !query.split('&').any(|kv| kv == "js=off")
 }
 
-/// The module script that hydrates a page. Inline, because the bundle's URL carries its fingerprint.
-pub fn boot_script() -> String {
-    format!(
-        "import {{ hydrate }} from \"{}\";\nwindow.d3set = hydrate(document);\n",
-        crate::assets::url("js/d3set.js")
-    )
+thread_local! {
+    // Set by `app.rs` around one request: the layout has no request.
+    static JS: Cell<bool> = const { Cell::new(true) };
+}
+
+/// Whether this request runs JavaScript. `false` for `?js=off`: then the layout sends no script.
+pub fn js() -> bool {
+    JS.with(Cell::get)
+}
+
+/// Run `f` with `on` as this request's JavaScript flag.
+pub fn with_js<R>(on: bool, f: impl FnOnce() -> R) -> R {
+    let before = JS.with(|c| c.replace(on));
+    let out = f();
+    JS.with(|c| c.set(before));
+    out
+}
+
+/// `GALLERY_SWAP_RING=1`: outline every region dp-swap replaces. Read once, at startup.
+pub static SWAP_RING: LazyLock<bool> =
+    LazyLock::new(|| std::env::var("GALLERY_SWAP_RING").is_ok_and(|v| v == "1"));
+
+/// The body attributes that turn the swap ring on, or none.
+pub fn swap_ring_attrs() -> Option<(&'static str, &'static str)> {
+    SWAP_RING.then_some(("data-swap-ring", ""))
 }
 
 pub fn rows(feed: Feed, limit: usize) -> Vec<Row> {
@@ -33,20 +52,7 @@ pub fn rows(feed: Feed, limit: usize) -> Vec<Row> {
     }
 }
 
-/// The time of the newest row, for `?since=`: the stream then sends only what the page does not have.
-fn newest(rows: &[Row]) -> Option<f64> {
-    rows.iter()
-        .filter_map(|r| r.get("at").as_str().and_then(d3set_ssr::time::parse_iso))
-        .reduce(f64::max)
-}
-
-pub fn stream(feed: Feed, rows: &[Row], max_rows: usize) -> Stream {
-    let url = match newest(rows) {
-        Some(t) => format!("/events/{}?since={t}", feed.name()),
-        None => format!("/events/{}", feed.name()),
-    };
-    Stream::new(url).max_rows(max_rows).key("id")
-}
+pub use crate::snippets::chart::stream;
 
 /// One rendered example: the figure, and its spec as JSON for the code block.
 pub struct ExampleView {
@@ -54,28 +60,24 @@ pub struct ExampleView {
     pub note: &'static str,
     pub feed: &'static str,
     pub html: String,
-    pub spec_json: String,
+    /// The spec as JSON, highlighted.
+    pub spec_html: String,
 }
 
 pub fn example(e: &Example, live: bool) -> Result<ExampleView, d3set_ssr::Error> {
     let rows = rows(e.feed, EXAMPLE_ROWS);
-    let html = if live {
-        figure(
-            &e.spec,
-            &rows,
-            &GALLERY,
-            PAGE_CHART,
-            Some(&stream(e.feed, &rows, EXAMPLE_ROWS)),
-        )?
-    } else {
-        static_figure(&e.spec, &rows, &GALLERY, PAGE_CHART)?
-    };
+    let width = crate::styles::page_chart_width();
+    let stream = live.then(|| stream(e.feed, &rows, EXAMPLE_ROWS));
+    let html = crate::snippets::chart::render(&e.spec, &rows, crate::styles::theme(), width, stream.as_ref())?;
     Ok(ExampleView {
         title: e.title,
         note: e.note,
         feed: e.feed.name(),
         html,
-        spec_json: crate::pretty::json(&jt::to_string(&SpecJson(&e.spec))),
+        spec_html: crate::highlight::html(
+            &crate::pretty::json(&jt::to_string(&SpecJson(&e.spec))),
+            "json",
+        ),
     })
 }
 
@@ -83,15 +85,11 @@ pub fn example(e: &Example, live: bool) -> Result<ExampleView, d3set_ssr::Error>
 pub fn thumbnail(spec: &Spec, feed: Feed) -> Result<String, d3set_ssr::Error> {
     let mut spec = spec.clone();
     spec.title = None;
-    spec.height = Some(if matches!(spec.kind.as_str(), "kpi" | "slo") {
-        72
-    } else {
-        150
-    });
+    spec.height = Some(if matches!(spec.kind.as_str(), "kpi" | "slo") { 72 } else { 150 });
     if spec.kind == "table" {
         spec.limit = Some(6);
     }
-    static_figure(&spec, &rows(feed, 400), &GALLERY, 300.0)
+    static_figure(&spec, &rows(feed, 400), crate::styles::theme(), 300.0)
 }
 
 /// Text with `code` spans: backticks become <code>. The input is our own catalog text.

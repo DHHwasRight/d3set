@@ -16,10 +16,10 @@ use d3set_ssr::Row;
 use tokio::sync::mpsc;
 
 /// SplitMix64: small, fast, and seedable.
-struct Rng(u64);
+pub(crate) struct Rng(pub(crate) u64);
 
 impl Rng {
-    fn next(&mut self) -> u64 {
+    pub(crate) fn next(&mut self) -> u64 {
         self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.0;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
@@ -27,10 +27,10 @@ impl Rng {
         z ^ (z >> 31)
     }
     /// Uniform in [0, 1).
-    fn f(&mut self) -> f64 {
+    pub(crate) fn f(&mut self) -> f64 {
         (self.next() >> 11) as f64 / (1u64 << 53) as f64
     }
-    fn pick<'a, T>(&mut self, items: &'a [T]) -> &'a T {
+    pub(crate) fn pick<'a, T>(&mut self, items: &'a [T]) -> &'a T {
         &items[(self.next() % items.len() as u64) as usize]
     }
 }
@@ -77,47 +77,7 @@ pub struct Sale {
     pub stage: &'static str,
 }
 
-jt::template! {
-    pub fn RequestJson(r: &Request) -> Json {
-        "id": r.id,
-        "at": iso(r.at),
-        "host": &*r.host,
-        "service": r.service,
-        "region": r.region,
-        "latency": r.latency,
-        "status": r.status,
-        "errors": r.errors,
-        "level": r.level,
-        "check": r.check,
-        "message": r.message.as_str(),
-    }
-}
-
-jt::template! {
-    pub fn SaleJson(s: &Sale) -> Json {
-        "id": s.id,
-        "at": iso(s.at),
-        "region": s.region,
-        "product": s.product,
-        "customer": s.customer,
-        "amount": s.amount,
-        "seats": s.seats,
-        "stage": s.stage,
-    }
-}
-
-jt::template! {
-    pub fn RequestsJson(rows: &[&Request]) -> Json = [ for r in rows { RequestJson(r) } ];
-}
-
-jt::template! {
-    pub fn SalesJson(rows: &[&Sale]) -> Json = [ for s in rows { SaleJson(s) } ];
-}
-
-// The first frame of a connection: a `replace` snapshot, or an `upsert` catch-up.
-jt::template! {
-    pub fn Envelope(op: &str, rows: jt::Raw<'_>) -> Json { "op": op, "rows": rows }
-}
+jt::load!("src/feeds.jt");
 
 impl Request {
     pub fn row(&self) -> Row {
@@ -301,10 +261,21 @@ pub static OPS: LazyLock<Feed<Request>> = LazyLock::new(|| Feed::new(4000));
 pub static SALES: LazyLock<Feed<Sale>> = LazyLock::new(|| Feed::new(2000));
 static GENERATOR: LazyLock<Mutex<Generator>> = LazyLock::new(|| Mutex::new(Generator::new()));
 
+/// `GALLERY_NOW=2026-10-01T00:00:00Z`: a fixed clock, for galleries that must draw the same rows
+/// (the conformity tests of `galleries/`). The history ends at that instant and the live feeds
+/// send nothing. Unset, the clock is the system's and the feeds are live.
+pub static FROZEN: LazyLock<Option<f64>> = LazyLock::new(|| {
+    std::env::var("GALLERY_NOW")
+        .ok()
+        .and_then(|v| d3set_ssr::time::parse_iso(v.trim()))
+});
+
 pub fn now() -> f64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_millis() as f64)
+    FROZEN.unwrap_or_else(|| {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0.0, |d| d.as_millis() as f64)
+    })
 }
 
 fn requests_frame(batch: &[Request]) -> Vec<u8> {
@@ -337,6 +308,10 @@ pub fn start() {
             at += 500.0 + g.rng.f() * 3000.0;
         }
         SALES.push(history, Vec::new());
+    }
+    // A fixed clock has no future: the feeds keep their history.
+    if FROZEN.is_some() {
+        return;
     }
     tokio::spawn(async {
         let mut tick = tokio::time::interval(TICK);
