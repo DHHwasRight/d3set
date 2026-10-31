@@ -17,8 +17,8 @@ const LANGS: Record<string, [string, string]> = {
   ".rs": ["rust", "Rust"],
 };
 
-/** The theme of `styles::ORIGINAL.code_theme`. */
-const THEME = "night-owl";
+/** The themes of the Rust gallery (`styles::CODE_THEME_LIGHT`, `styles::CODE_THEME`). */
+const THEMES = { light: "night-owl-light", dark: "night-owl" };
 
 /** `paths`, from the repository root `root`, read and highlighted. */
 export async function readSnippets(root: string, paths: string[]): Promise<Snippets> {
@@ -28,7 +28,9 @@ export async function readSnippets(root: string, paths: string[]): Promise<Snipp
     const code = await readFile(join(root, path), "utf8");
     const html = await codeToHtml(code.trimEnd(), {
       lang,
-      theme: THEME,
+      themes: THEMES,
+      // Each color as `light-dark(light, dark)`, like giallo: the page's color scheme picks one.
+      defaultColor: "light-dark()",
       transformers: [
         {
           pre(node) {

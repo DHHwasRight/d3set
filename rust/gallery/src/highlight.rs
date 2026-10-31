@@ -36,9 +36,13 @@ fn build() -> Result<Registry, String> {
     Ok(registry)
 }
 
-/// `<pre><code>` with inline colors. `lang` is a grammar name or alias: `rust`, `rsx`, `jt`, `json`, `ts`, `text`.
+/// `<pre><code>` with inline colors, each a `light-dark()` pair: the page's color scheme picks one. `lang` is a grammar name or alias: `rust`, `rsx`, `jt`, `json`, `ts`, `text`.
 pub fn html(code: &str, lang: &str) -> String {
-    let options = HighlightOptions::new(lang, ThemeVariant::Single(crate::styles::CODE_THEME))
+    let theme = ThemeVariant::Dual {
+        light: crate::styles::CODE_THEME_LIGHT,
+        dark: crate::styles::CODE_THEME,
+    };
+    let options = HighlightOptions::new(lang, theme)
         .fallback_to_plain(true);
     match REGISTRY.highlight(code.trim_end(), &options) {
         Ok(highlighted) => HtmlRenderer::default().render(&highlighted, &RenderOptions::default()),
