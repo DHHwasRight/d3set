@@ -95,8 +95,10 @@ const server = createServer(async (req, res) => {
 
 // ------------------------------------------------------------------ rebuild
 
-// Which part of the site a changed file belongs to. The library (src/, packages/) is in all.
-function partsFor(file) {
+// Which build tasks a changed file needs (see build.mjs). Only the gallery the file belongs to
+// builds again; a change in the Rust gallery reaches the framework galleries only when the pages
+// it exports changed (`--follow-fixtures`).
+function tasksFor(file) {
   const rel = relative(root, file).split(sep).join("/");
   // Build output, written by the build itself: watching it would rebuild forever.
   if (/(^|\/)(node_modules|dist|out|\.next|target|test-results|fixtures)(\/|$)/.test(rel)) return [];
@@ -104,8 +106,13 @@ function partsFor(file) {
   if (/(next-env\.d\.ts|\.tsbuildinfo)$/.test(rel)) return [];
   // Anything else git ignores is generated too (the bundles build.rs writes, for one).
   if (spawnSync("git", ["check-ignore", "-q", rel], { cwd: root }).status === 0) return [];
-  if (rel.startsWith("rust/")) return ["rsx", "fixtures", "vanilla", "react", "next"];
-  if (rel.startsWith("src/") || rel.startsWith("packages/")) return ["rsx", "vanilla", "react", "next"];
+  // The Rust gallery and its renderer: the Rust site, and the pages the others draw.
+  if (rel.startsWith("rust/")) return ["rsx", "fixtures"];
+  // The library: in every gallery (the Rust gallery bundles it in build.rs, Next.js uses its build).
+  if (rel.startsWith("src/")) return ["rsx", "fixtures", "lib", "vanilla", "react", "next"];
+  if (rel.startsWith("packages/react/")) return ["lib", "react", "next"];
+  if (rel.startsWith("packages/next/")) return ["lib", "next"];
+  if (rel === "galleries/shared/scripts/export.mjs") return ["fixtures"];
   if (rel.startsWith("galleries/shared/")) return ["vanilla", "react", "next"];
   for (const name of ["vanilla", "react", "next"]) if (rel.startsWith(`galleries/${name}/`)) return [name];
   return [];
@@ -118,7 +125,7 @@ let timer;
 function build(parts) {
   building = true;
   const args = ["scripts/pages/build.mjs", "--out", out];
-  if (parts) args.push("--only", [...parts].join(","));
+  if (parts) args.push("--only", [...parts].join(","), "--follow-fixtures");
   const child = spawn("node", args, { cwd: root, stdio: "inherit", env: { ...process.env, PAGES_URL: site } });
   child.on("exit", (code) => {
     building = false;
@@ -146,7 +153,7 @@ server.listen(port, "127.0.0.1", () => {
   for (const dir of ["src", "packages", "rust", "galleries"]) {
     watch(join(root, dir), { recursive: true }, (_event, name) => {
       if (!name) return;
-      const parts = partsFor(join(root, dir, name));
+      const parts = tasksFor(join(root, dir, name));
       if (!parts.length) return;
       if (process.env.PAGES_DEBUG) console.log(`pages: changed ${dir}/${name}`);
       for (const p of parts) pending.add(p);

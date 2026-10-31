@@ -36,10 +36,34 @@ npm run dev         # terminal 2: demo page
 ```ts
 import { createTheme, darkTheme } from "d3set";
 
-const brand = createTheme({ color: { accent: "#e11d48", series: ["#e11d48", "#0891b2"] } });
-const brandDark = createTheme({ color: { accent: "#fb7185" } }, darkTheme);
-dashboard.setTheme(brandDark);
+const brand = createTheme({
+  color: { accent: "#e11d48", series: ["#e11d48", "#0891b2"] },
+  dark: { accent: "#fb7185", series: ["#fb7185", "#22d3ee"] },
+});
+dashboard.setTheme(brand);
 ```
+
+### Light and dark
+
+Every color a chart draws is a CSS var (`fill: var(--d3s-series-0)`). With `theme.dark`, each var
+holds `light-dark(<light>, <dark>)`, so the page's CSS `color-scheme` picks the color:
+
+```css
+:root { color-scheme: light dark; }                     /* follow the system */
+:root[data-theme="dark"] { color-scheme: dark; }        /* or force one */
+```
+
+- A switch changes `color-scheme`. The charts change color with no redraw, and the server-rendered
+  markup is right before any script runs.
+- `lightTheme` has `dark: darkTheme.color`. `darkTheme` has no `dark`: it is always dark.
+- `theme.dark` is partial: a color it leaves out is the same in both modes. `createTheme` merges it.
+- The vars: `--d3s-bg`, `--d3s-surface`, `--d3s-text`, `--d3s-text-muted`, `--d3s-grid`,
+  `--d3s-axis`, `--d3s-accent`, `--d3s-positive`, `--d3s-warning`, `--d3s-negative`,
+  `--d3s-series-<i>`, `--d3s-named-<hash>` (one per `color.named` entry), `--d3s-seq-0` and
+  `--d3s-seq-1`. A continuous color (heatmap, gauge) is
+  `color-mix(in oklab, var(--d3s-seq-1) <p>%, var(--d3s-seq-0))`.
+- The Rust renderer writes the same vars: `Theme { dark: Some(&colors), .. }`, with
+  `d3set_ssr::Colors` (`LIGHT` takes `DARK_COLORS`).
 
 Host CSS can override any token: `.my-app .d3s-root { --d3s-radius: 0; }`.
 Charts respect `prefers-reduced-motion`.
@@ -121,41 +145,89 @@ The same gallery exists four times, once per way to use d3set:
 | React | `galleries/react` | http://localhost:3310 | `npm run dev -w galleries/react` |
 | Next.js | `galleries/next` | http://localhost:3320 | `npm run dev -w galleries/next` |
 
-The Rust gallery is a [brocanth](../brocanth) app: every chart type, server-rendered and hydrated, two live
+The Rust gallery is a [brocanth](https://github.com/DHHwasRight/brocanth) app: every chart type, server-rendered and hydrated, two live
 dashboards, an analytics page, and sample feeds typed in Rust and written as JSON by jt (`/data/ops`,
-`/data/sales`, `/events/{feed}`). `mise run gallery` builds the browser bundle into `rust/gallery/assets`,
-then serves the gallery.
+`/data/sales`, `/events/{feed}`). The Rust gallery is the reference: the framework galleries draw the
+pages it exports (`galleries/shared/fixtures`, not in git). Each gallery shows its own code: the snippets
+on its pages are the files in its `snippets/` folder.
 
-The Rust gallery is the reference. The framework galleries draw the pages that
-`galleries/shared/scripts/export.mjs` exports from it. Export the pages again after you change the Rust
-gallery:
+#### Launch the galleries
+
+1. Install the toolchain and the packages, once:
+
+   ```sh
+   mise install     # Rust 1.98 and Node 26, from mise.toml
+   npm ci
+   ```
+
+2. Start the Rust gallery. `mise run gallery` builds the browser bundle and serves
+   http://localhost:3000 with live feeds.
+3. Before the first start of a framework gallery, and after each change to the Rust gallery, export the
+   pages it draws:
+
+   ```sh
+   node scripts/pages/build.mjs --only fixtures
+   ```
+
+   This builds the Rust gallery, runs it with a fixed clock on port 3140, and writes the fixtures.
+4. Start any framework gallery with its `Run` command above. Vite and Next.js reload on change.
+
+To see all four at once as they are published, build the GitHub Pages site and serve it:
 
 ```sh
-GALLERY_NOW=2026-10-01T00:00:00Z GALLERY_ADDR=127.0.0.1:3140 ./target/debug/gallery &
-node galleries/shared/scripts/export.mjs http://127.0.0.1:3140
+npm run pages:serve   # http://localhost:4000/d3set/
 ```
-
-Each gallery shows its own code: the snippets on its pages are the files in its `snippets/` folder.
 
 The switch at the top right opens the same page in the other galleries. The links use the addresses above.
 To change them, set `GALLERY_LIBRARIES`, for example
 `GALLERY_LIBRARIES=vanilla=https://vanilla.example.com,rsx=https://rust.example.com,react=...,next=...`.
 The Rust gallery reads it when it starts. The framework galleries read it when they build.
 
+Settings of the Rust gallery, read when it starts:
+
+| Variable | Does |
+| --- | --- |
+| `GALLERY_ADDR` | Address to listen on. Default `127.0.0.1:3000` |
+| `GALLERY_NOW` | Fixed clock, for example `2026-10-01T00:00:00Z`: the history ends there and the feeds stop |
+| `GALLERY_STATIC=1` | Static pages: the charts poll `data/<feed>.json`, dp-swap reads `partials/`. For `gallery export` |
+| `GALLERY_BASE` | Path prefix of a static site, for example `/d3set` |
+| `GALLERY_LIBRARIES` | Addresses of the four galleries for the library switch |
+| `GALLERY_SWAP_RING=1` | Outline each region a partial navigation replaces |
+
 Code snippets in the Rust gallery are highlighted on the server with [giallo](https://github.com/getzola/giallo)
 (TextMate grammars and VS Code themes): Rust, JSON, and TypeScript from its built-in set, rsx and jt from
-`rsx::grammar` and `jt::grammar`, the same grammars their VS Code extensions ship. Until those modules
-are pushed, `Cargo.toml` patches `rsx` and `jt` to the sibling checkouts `../templ` and `../jt`.
+`rsx::grammar` and `jt::grammar`, the same grammars their VS Code extensions ship.
 
 ### GitHub Pages
 
 The four galleries also build as one static site, for https://dhhwasright.github.io/d3set/:
 the Rust gallery at the root, the others under `vanilla/`, `react/` and `next/`.
+`.github/workflows/pages.yml` builds, tests and deploys it on every push to `main`.
 
 ```sh
 npm run pages:build   # dist-pages/, for the GitHub Pages address
 npm run pages:serve   # http://localhost:4000/d3set/, rebuilds on change and reloads the browser
 ```
+
+`pages:build` (`scripts/pages/build.mjs`) runs these tasks. A task starts when the tasks it needs are
+done, so independent ones run in parallel:
+
+| Task | Does | Needs |
+| --- | --- | --- |
+| `cargo` | Builds the gallery binary | |
+| `fixtures` | Exports the Rust gallery's pages for the framework galleries | `cargo` |
+| `rsx` | Writes the Rust gallery as files with `gallery export` | `cargo` |
+| `lib` | Builds d3set, `@d3set/react` and `@d3set/next`, which Next.js loads | |
+| `vanilla`, `react` | Build the gallery under its path prefix | `fixtures` |
+| `next` | Same, with `output: "export"` | `fixtures`, `lib` |
+
+The console shows one line per task. Each task's output is in `target/pages-logs/<task>.log`, and the
+console prints the end of it when the task fails. `--only rsx,next` runs some tasks: a task they need runs
+too when its output is missing.
+
+`pages:serve` watches `src/`, `packages/`, `rust/` and `galleries/`, and runs only the tasks a change needs:
+a framework gallery's file rebuilds that gallery, a Rust file rebuilds the Rust site and the fixtures,
+and the framework galleries only when the fixtures changed. The open pages reload when the build ends.
 
 - The Rust gallery runs with `GALLERY_STATIC=1` and `GALLERY_BASE=/d3set`, and `gallery export`
   writes it with [brocanth-static](https://github.com/DHHwasRight/brocanth/blob/main/docs/static-export.md):
@@ -166,7 +238,8 @@ npm run pages:serve   # http://localhost:4000/d3set/, rebuilds on change and rel
 - The charts poll the timelines (`transport: "poll"`, see [Pull from a static file](#pull-from-a-static-file))
   instead of following server-sent events.
 - `PAGES_URL` builds for another address. `pages:serve` builds for its own address, so the library
-  switch stays on the local server. `D3SET_PAGES=1 npm run e2e` tests the built site.
+  switch stays on the local server; `PORT` and `PAGES_OUT` change its port and directory.
+- `D3SET_PAGES=1 npm run e2e` also tests the built site; `D3SET_PAGES=only` tests only the built site.
 
 Append `?js=off` to any page to see what the server sends. Rust 1.98 is pinned in `mise.toml`: rsx proc macros
 do not load across compiler versions.

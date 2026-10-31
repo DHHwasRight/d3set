@@ -26,5 +26,4 @@ galleries/next/next-env.d.ts
 
 # Local build output, not part of the repository.
 rust/gallery/public/reference/
-dist-pages/
-dist-pages-e2e/
+dist-pages*/
