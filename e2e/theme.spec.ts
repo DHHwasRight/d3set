@@ -61,6 +61,18 @@ test("a chart changes colors with the theme without a redraw", async ({ page }) 
   expect(await element!.evaluate((e) => e.isConnected)).toBe(true);
 });
 
+test("the code blocks follow the switch, not the system", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await open(page, "/charts/bar");
+  const code = page.locator("pre.giallo").first();
+  const fill = () => code.evaluate((e) => getComputedStyle(e).backgroundColor);
+  const light = await fill();
+  await page.locator("#theme-switch").click();
+  await expect.poll(fill).not.toBe(light);
+  await page.locator("#theme-switch").click();
+  await expect.poll(fill).toBe(light);
+});
+
 test("the switch keeps working after a partial navigation", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await open(page, "/charts/bar");

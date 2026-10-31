@@ -124,6 +124,9 @@ details.code pre code, pre.block code { color: inherit; background: none; border
 
 /* Highlighted code (giallo, night-owl): colors are inline, layout is here. */
 pre.giallo { margin: 0; padding: 16px 18px; overflow-x: auto; font: 13px/21px var(--mono); tab-size: 4; }
+/* The highlighters write `color-scheme: light dark` inline, which follows the system: take the
+   page's scheme so the theme switch changes the code colors too. */
+pre.giallo, pre.shiki { color-scheme: inherit !important; }
 pre.giallo code { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
 .block { margin: 12px 0 8px; border-radius: var(--radius); overflow: hidden; }
 details.code pre.giallo { border-radius: 0; }
