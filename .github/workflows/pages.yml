@@ -39,6 +39,11 @@ jobs:
 
       - run: npm ci
 
+      # Cargo.lock must pin brocanth, rsx and jt on GitHub: one committed while
+      # scripts/dev/local-deps.mjs was on would not resolve here.
+      - name: Check Cargo.lock
+        run: cargo metadata --locked --format-version 1 > /dev/null
+
       - name: Build the site
         run: npm run pages:build
 

@@ -10,3 +10,11 @@ run = ["cargo run -p gallery"]
 [tasks.parity]
 description = "Compare the Rust and TypeScript renders of every chart"
 run = ["cargo build -p d3set-ssr --example render", "npx vitest run test/ssr-parity.test.ts"]
+
+[tasks."deps:local"]
+description = "Build against the local brocanth, rsx and jt checkouts (../brocanth, ../templ, ../jt)"
+run = "node scripts/dev/local-deps.mjs on"
+
+[tasks."deps:remote"]
+description = "Build against brocanth, rsx and jt from GitHub again, with Cargo.lock as it was"
+run = "node scripts/dev/local-deps.mjs off"

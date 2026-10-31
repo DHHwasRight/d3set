@@ -172,6 +172,21 @@ on its pages are the files in its `snippets/` folder.
    This builds the Rust gallery, runs it with a fixed clock on port 3140, and writes the fixtures.
 4. Start any framework gallery with its `Run` command above. Vite and Next.js reload on change.
 
+#### Work on brocanth, rsx or jt at the same time
+
+The Rust crates take brocanth, rsx and jt from GitHub, pinned by `Cargo.lock`. To build against
+your local checkouts instead (`../brocanth`, `../templ` for rsx, `../jt`):
+
+```sh
+mise run deps:local    # node scripts/dev/local-deps.mjs on
+mise run deps:remote   # back to GitHub; puts Cargo.lock back as it was
+```
+
+`deps:local` writes `.cargo/config.toml` (not in git) with a `[patch]` for every crate of those
+repositories, so cargo and rust-analyzer use the local sources. Set `BROCANTH_DIR`, `RSX_DIR` or
+`JT_DIR` for other locations. Run `deps:remote` before you commit `Cargo.lock`: CI rejects a lock
+file that does not resolve to GitHub.
+
 To see all four at once as they are published, build the GitHub Pages site and serve it:
 
 ```sh

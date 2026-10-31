@@ -27,3 +27,6 @@ galleries/next/next-env.d.ts
 # Local build output, not part of the repository.
 rust/gallery/public/reference/
 dist-pages*/
+
+# Local cargo settings: scripts/dev/local-deps.mjs writes the patches for local checkouts here.
+/.cargo/
