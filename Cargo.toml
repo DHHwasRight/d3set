@@ -13,11 +13,3 @@ d3set-ssr = { path = "rust/d3set-ssr" }
 # Git, like brocanth's own pages and assets crates: two copies of rsx would be two `Template` traits.
 rsx = { git = "https://github.com/DHHwasRight/rsx.git", branch = "main" }
 jt = { git = "https://github.com/DHHwasRight/jt.git", branch = "main" }
-
-# The TextMate grammars (`rsx::grammar`, `jt::grammar`) are in the local checkouts and not on the
-# remotes yet. Drop these two patches once both are pushed.
-[patch."https://github.com/DHHwasRight/rsx.git"]
-rsx = { path = "../templ/crates/rsx" }
-
-[patch."https://github.com/DHHwasRight/jt.git"]
-jt = { path = "../jt/crates/jt" }

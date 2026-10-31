@@ -15,7 +15,9 @@ const NEXT_PORT = 3200;
 // galleries drawing the pages exported from it (galleries/).
 const CONFORMITY = process.env.D3SET_CONFORMITY === "1";
 // The GitHub Pages build (`npm run pages:build`), served on its own port: `D3SET_PAGES=1`.
-const PAGES = process.env.D3SET_PAGES === "1";
+// `D3SET_PAGES=only` runs it alone, with no other server (CI).
+const PAGES_ONLY = process.env.D3SET_PAGES === "only";
+const PAGES = PAGES_ONLY || process.env.D3SET_PAGES === "1";
 const PAGES_PORT = 4010;
 const REFERENCE_PORT = Number(process.env.GALLERY_REFERENCE_PORT ?? 3140);
 // `D3SET_GALLERIES=vanilla,react` limits the run to some galleries.
@@ -33,7 +35,7 @@ const server = (port: number, env: Record<string, string> = {}) => ({
   timeout: 30_000,
 });
 
-export default defineConfig({
+const config = defineConfig({
   testDir: "e2e",
   timeout: 60_000,
   fullyParallel: true,
@@ -119,3 +121,10 @@ export default defineConfig({
       : []),
   ],
 });
+
+if (PAGES_ONLY) {
+  config.projects = config.projects!.filter((p) => p.name === "pages");
+  config.webServer = (config.webServer as { url?: string }[]).filter((w) => w.url?.includes(`:${PAGES_PORT}/`));
+}
+
+export default config;

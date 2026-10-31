@@ -195,6 +195,7 @@ dependencies = [
 [[package]]
 name = "brocanth"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/brocanth.git?branch=main#a0df519fa4bfd0c0150f15b4b6d22b2dd75e9bd1"
 dependencies = [
  "http",
  "thiserror",
@@ -204,6 +205,7 @@ dependencies = [
 [[package]]
 name = "brocanth-assets"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/brocanth.git?branch=main#a0df519fa4bfd0c0150f15b4b6d22b2dd75e9bd1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -213,6 +215,7 @@ dependencies = [
 [[package]]
 name = "brocanth-bundle"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/brocanth.git?branch=main#a0df519fa4bfd0c0150f15b4b6d22b2dd75e9bd1"
 dependencies = [
  "anyhow",
  "lightningcss",
@@ -224,6 +227,7 @@ dependencies = [
 [[package]]
 name = "brocanth-pages"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/brocanth.git?branch=main#a0df519fa4bfd0c0150f15b4b6d22b2dd75e9bd1"
 dependencies = [
  "brocanth",
  "proc-macro2",
@@ -234,6 +238,7 @@ dependencies = [
 [[package]]
 name = "brocanth-server"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/brocanth.git?branch=main#a0df519fa4bfd0c0150f15b4b6d22b2dd75e9bd1"
 dependencies = [
  "brocanth",
  "bytes",
@@ -246,6 +251,7 @@ dependencies = [
 [[package]]
 name = "brocanth-static"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/brocanth.git?branch=main#a0df519fa4bfd0c0150f15b4b6d22b2dd75e9bd1"
 dependencies = [
  "brocanth",
  "brocanth-server",
@@ -1290,6 +1296,7 @@ dependencies = [
 [[package]]
 name = "jt"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/jt.git?branch=main#f406170f53d0d07407416c25af8cfb7bed2c6892"
 dependencies = [
  "itoa",
  "jt-macros",
@@ -1299,6 +1306,7 @@ dependencies = [
 [[package]]
 name = "jt-core"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/jt.git?branch=main#f406170f53d0d07407416c25af8cfb7bed2c6892"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1309,6 +1317,7 @@ dependencies = [
 [[package]]
 name = "jt-macros"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/jt.git?branch=main#f406170f53d0d07407416c25af8cfb7bed2c6892"
 dependencies = [
  "jt-core",
  "proc-macro2",
@@ -2990,6 +2999,7 @@ dependencies = [
 [[package]]
 name = "rsx"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/rsx.git?branch=main#8d34d908b50e3b94f7b244d1fa4c97ecc565b1cb"
 dependencies = [
  "rsx-macros",
 ]
@@ -2997,10 +3007,12 @@ dependencies = [
 [[package]]
 name = "rsx-core"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/rsx.git?branch=main#8d34d908b50e3b94f7b244d1fa4c97ecc565b1cb"
 
 [[package]]
 name = "rsx-macros"
 version = "0.1.0"
+source = "git+https://github.com/DHHwasRight/rsx.git?branch=main#8d34d908b50e3b94f7b244d1fa4c97ecc565b1cb"
 dependencies = [
  "proc-macro2",
  "rsx-core",

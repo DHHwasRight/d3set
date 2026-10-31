@@ -1,0 +1,68 @@
+# Build the four galleries as one static site and publish it on GitHub Pages:
+# https://dhhwasright.github.io/d3set/
+#
+# brocanth, rsx and jt come from GitHub, pinned by Cargo.lock.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push replaces a queued one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Rust 1.98 and Node 26, pinned in mise.toml: rsx proc macros need the exact compiler.
+      - uses: jdx/mise-action@v2
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - run: npm ci
+
+      - name: Build the site
+        run: npm run pages:build
+
+      # The built site, served like GitHub serves it, in a browser: pages, partials, polling,
+      # the library switch, the 404.
+      - name: Test the site
+        run: D3SET_PAGES=only npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
