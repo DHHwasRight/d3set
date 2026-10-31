@@ -184,6 +184,78 @@ export function animate<E extends d3.BaseType, D, P extends d3.BaseType, PD>(
   return ms > 0 ? sel.transition().duration(ms) : (sel.interrupt() as unknown as d3.Transition<E, D, P, PD>);
 }
 
+/** A point of a path, keyed by its x value, with its drawn coordinates in pixels. */
+export interface PathPoint {
+  key: number;
+  at: number[];
+}
+
+/**
+ * Where each point of `next` starts its move: where the same key was drawn, else at the last
+ * kept point before it, else at the first kept point after it, else where it ends.
+ */
+export function tweenStarts(before: Map<number, number[]>, next: PathPoint[]): number[][] {
+  const kept = next.map((p) => before.get(p.key));
+  const from: (number[] | undefined)[] = [...kept];
+  let carry: number[] | undefined;
+  for (let i = 0; i < from.length; i++) {
+    if (kept[i]) carry = kept[i];
+    else from[i] = carry;
+  }
+  carry = undefined;
+  for (let i = from.length - 1; i >= 0; i--) {
+    if (kept[i]) carry = kept[i];
+    else from[i] ??= carry;
+  }
+  return next.map((p, i) => from[i] ?? p.at);
+}
+
+const drawnPoints = new WeakMap<Element, Map<number, number[]>>();
+
+/**
+ * Draw paths through keyed points, and animate them point by point. Each point moves from where
+ * the same key was drawn; a new point starts at its nearest drawn neighbour, so a line grows from
+ * its end instead of folding. A plain transition of `d` pairs path commands by position: when a
+ * point is added or removed, they no longer match and the line kinks while it moves.
+ */
+export function tweenPath<D>(
+  sel: d3.Selection<SVGPathElement, D, d3.BaseType, unknown>,
+  ms: number,
+  pointsOf: (d: D) => PathPoint[],
+  draw: (at: number[][]) => string | null,
+): void {
+  sel.each(function (d) {
+    const el = this;
+    const next = pointsOf(d);
+    const before = drawnPoints.get(el);
+    drawnPoints.set(el, new Map(next.map((p) => [p.key, p.at])));
+    const end = draw(next.map((p) => p.at)) ?? "";
+    const path = d3.select(el);
+    if (ms <= 0 || !before || before.size === 0) {
+      path.interrupt().attr("d", end);
+      return;
+    }
+    const start = tweenStarts(before, next);
+    path
+      .transition()
+      .duration(ms)
+      .attrTween(
+        "d",
+        () => (t) =>
+          t >= 1
+            ? end
+            : (draw(
+                next.map((p, i) =>
+                  p.at.map((v, j) => {
+                    const a = start[i]![j] ?? v;
+                    return a + (v - a) * t;
+                  }),
+                ),
+              ) ?? ""),
+      );
+  });
+}
+
 /**
  * Animate a `translate(x,y)` transform. A string interpolation is enough for
  * translations and does not need the SVG transform API.

@@ -14,7 +14,7 @@ import {
   renderAxes,
   renderMarkers,
   stableColors,
-  animate,
+  tweenPath,
   xyLook,
   xyMargin,
 } from "./util";
@@ -98,12 +98,14 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
     });
     pointer.resize(w, h);
 
+    // Drawn in pixels, [x, y0, y1]: the points animate one by one (tweenPath), keyed by their x.
     const area = d3
-      .area<Band["points"][number]>()
-      .x((p) => x(p.x as never))
-      .y0((p) => y(p.y0))
-      .y1((p) => y(p.y1))
+      .area<number[]>()
+      .x((p) => p[0]!)
+      .y0((p) => p[1]!)
+      .y1((p) => p[2]!)
       .curve(curve);
+    const pixels = (d: Band) => d.points.map((p) => ({ key: +p.x, at: [x(p.x as never), y(p.y0), y(p.y1)] }));
 
     // Gradient ids follow the series index among all keys, so hiding a series does not change them.
     const fillId = (k: string) => gradientId(spec, data.keys.indexOf(k));
@@ -129,13 +131,13 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
       .attr("fill-opacity", gradient ? null : stacked ? 0.85 : 0.35)
       .style("stroke", (d) => (gradient ? "none" : color(d.key)))
       .attr("stroke-width", gradient ? null : stacked ? 0 : 1.5)
-      .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", (d) => area(d.points)));
+      .call((s) => tweenPath(s, animated ? motionMs(theme) : 0, pixels, (at) => area(at)));
 
     // Gradient mode: the outline is only the top edge of each area, with the same curve.
     const topLine = d3
-      .line<Band["points"][number]>()
-      .x((p) => x(p.x as never))
-      .y((p) => y(p.y1))
+      .line<number[]>()
+      .x((p) => p[0]!)
+      .y((p) => p[2]!)
       .curve(curve);
     linesG
       ?.selectAll<SVGPathElement, Band>("path")
@@ -145,7 +147,7 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
       .style("fill", "none")
       .style("stroke", (d) => color(d.key))
       .attr("stroke-width", 2)
-      .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", (d) => topLine(d.points)));
+      .call((s) => tweenPath(s, animated ? motionMs(theme) : 0, pixels, (at) => topLine(at)));
 
     renderMarkers(layers.plot, y, w, theme, spec.thresholds, fmt);
     legend.update(data.keys, color);

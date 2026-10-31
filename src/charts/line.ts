@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { formatX, toSeriesData, xInteract, xScale, type SeriesData, type XValue } from "./xy";
 import {
-  animate,
+  tweenPath,
   createFrame,
   createLegend,
   createTooltip,
@@ -76,10 +76,11 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
     });
     pointer.resize(w, h);
 
+    // Drawn in pixels: the points animate one by one (tweenPath), keyed by their x.
     const line = d3
-      .line<Point>()
-      .x((p) => x(p[0] as never))
-      .y((p) => y(p[1]))
+      .line<number[]>()
+      .x((p) => p[0]!)
+      .y((p) => p[1]!)
       .curve(curve);
     const series = keys.map(
       (k) =>
@@ -97,7 +98,14 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
       // In `style`, like the stroke and like the Rust renderer's path: the first frame is the same.
       .style("fill", "none")
       .style("stroke", ([k]) => color(k))
-      .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", ([, pts]) => line(pts as Point[])));
+      .call((s) =>
+        tweenPath(
+          s,
+          animated ? motionMs(theme) : 0,
+          ([, pts]) => (pts as Point[]).map((p) => ({ key: +p[0], at: [x(p[0] as never), y(p[1])] })),
+          (at) => line(at),
+        ),
+      );
 
     renderMarkers(layers.plot, y, w, theme, spec.thresholds, fmt);
     legend.update(data.keys, color);
