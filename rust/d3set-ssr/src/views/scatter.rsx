@@ -16,7 +16,7 @@ pub fn Scatter(
         <XY axes={axes} margin={margin}>
             <g>
                 for d in dots {
-                    <circle r={&d.r} fill={d.color} fill-opacity={fill_opacity} stroke={d.color} opacity="1" cx={&d.cx} cy={&d.cy}></circle>
+                    <circle r={&d.r} fill-opacity={fill_opacity} opacity="1" cx={&d.cx} cy={&d.cy} style={format!("fill: {}; stroke: {};", d.color, d.color)}></circle>
                 }
             </g>
         </XY>

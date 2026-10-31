@@ -11,6 +11,10 @@ pub fn Layout(layout: &str, path: &str, children: Element) -> Element {
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            // The stored theme choice, before the first paint: no flash of the other theme.
+            if js() {
+                <script>{!crate::site::THEME_SCRIPT}</script>
+            }
             <title>{TITLE} · charts rendered on the server</title>
             <link rel="icon" href="/favicon.svg" type="image/svg+xml">
             // A static host cannot read DP-Partial: dp-swap fetches partials/<depth>/<path>.
@@ -27,6 +31,9 @@ pub fn Layout(layout: &str, path: &str, children: Element) -> Element {
                 <TopNav path={path} oob={false} />
                 <div class="top-search"><span>Search the gallery</span><kbd>/</kbd></div>
                 <LibrarySwitch path={path} oob={false} />
+                if js() {
+                    <ThemeSwitch />
+                }
             </header>
             <div class="shell">
                 <aside class="side">
@@ -72,6 +79,15 @@ pub fn LibrarySwitch(path: &str, oob: bool) -> Element {
             <a href={href} data-library={library.id} dp-boost="false" { ...current_attr(library.id) }>{library.name}</a>
         }
     </nav>
+}
+
+// Light or dark. The page follows the system until a click stores a choice; `_src/theme.js`
+// handles the click. It does not depend on the path, so a partial never sends it.
+pub fn ThemeSwitch() -> Element {
+    <button type="button" class="theme-switch" id="theme-switch" aria-label="Dark mode" aria-pressed="false">
+        <svg class="moon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1z" fill="currentColor"></path></svg>
+        <svg class="sun" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"></circle><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+    </button>
 }
 
 pub fn SideNav(path: &str, oob: bool) -> Element {

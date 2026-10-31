@@ -15,6 +15,7 @@ import {
 } from "@d3set/gallery-shared";
 import { fill } from "@d3set/gallery-shared/docs";
 import { followLibrarySwitch, markLibrary, parseLibraries } from "@d3set/gallery-shared/libraries";
+import { followThemeSwitch, syncThemeSwitch } from "@d3set/gallery-shared/theme";
 import { inBase, stripBase, withBase, withStreams } from "@d3set/gallery-shared/site";
 import snippets from "virtual:snippets";
 import { docs } from "./docs";
@@ -125,6 +126,7 @@ async function render(): Promise<void> {
   const own = withStreams(withBase(fill(page.body, docs, snippets), site.base), site.data);
   const body = markLibrary(own, "vanilla", libraries, page.path);
   document.body.replaceChildren(...body.map((n) => build(n, pending)));
+  syncThemeSwitch();
   if (!url.hash) window.scrollTo(0, 0);
 
   await draw(pending, () => id === navigation);
@@ -151,4 +153,5 @@ window.addEventListener("popstate", () => {
 });
 
 followLibrarySwitch(libraries, site.base);
+followThemeSwitch();
 render().catch((err) => console.error("gallery: first load:", err));

@@ -94,7 +94,7 @@ export const kpiChart: ChartFactory = (el, spec, ctx) => {
         .data([points])
         .join("path")
         .attr("class", "area")
-        .attr("fill", "var(--d3s-accent)")
+        .style("fill", "var(--d3s-accent)")
         .attr("fill-opacity", 0.12)
         .attr("d", area);
       svg
@@ -103,7 +103,7 @@ export const kpiChart: ChartFactory = (el, spec, ctx) => {
         .join("path")
         .attr("class", "line")
         .attr("fill", "none")
-        .attr("stroke", "var(--d3s-accent)")
+        .style("stroke", "var(--d3s-accent)")
         .attr("stroke-width", 1.5)
         .attr("vector-effect", "non-scaling-stroke")
         .attr("d", line);

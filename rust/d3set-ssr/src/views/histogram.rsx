@@ -8,7 +8,7 @@ pub fn Histogram(width: f64, height: f64, axes: &XYAxes, margin: Margin, rects: 
         <XY axes={axes} margin={margin}>
             <g>
                 for r in rects {
-                    <rect fill="var(--d3s-accent)" x={&r.x} width={&r.width} y={&r.y} height={&r.height}></rect>
+                    <rect x={&r.x} width={&r.width} y={&r.y} height={&r.height} style="fill: var(--d3s-accent);"></rect>
                 }
             </g>
         </XY>

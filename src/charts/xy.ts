@@ -120,7 +120,7 @@ export function xInteract(plot: d3.Selection<SVGGElement, unknown, null, undefin
   const rule = plot
     .append("line")
     .attr("class", "d3s-rule")
-    .attr("stroke", "var(--d3s-axis)")
+    .style("stroke", "var(--d3s-axis)")
     .attr("stroke-dasharray", "3 3")
     .attr("pointer-events", "none")
     .attr("hidden", true);

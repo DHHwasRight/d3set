@@ -14,7 +14,16 @@ export {
   type StreamOption,
 } from "./hydrate";
 
-export { applyTheme, createTheme, darkTheme, lightTheme, themeToCssVars, type Theme } from "./theme/theme";
+export {
+  applyTheme,
+  createTheme,
+  darkTheme,
+  lightDark,
+  lightTheme,
+  namedVar,
+  themeToCssVars,
+  type Theme,
+} from "./theme/theme";
 
 export { sseSource, buildUrl, type SseSourceOptions } from "./data/sse";
 export { pollSource, type PollSourceOptions, type Timeline } from "./data/poll";

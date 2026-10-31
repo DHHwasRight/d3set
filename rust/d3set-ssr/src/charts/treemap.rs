@@ -348,7 +348,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
                 width: raw(lw),
                 height: raw(lh),
                 fill,
-                text_fill: text_on(fill),
+                text_fill: text_on(c.theme, fill),
                 clip_id: format!("d3s-clip-ssr{}", CLIP_IDS.fetch_add(1, Ordering::Relaxed)),
                 label: if lw > 40.0 && lh > 20.0 {
                     format!("{} {}", n.name, fmt.format(n.value))

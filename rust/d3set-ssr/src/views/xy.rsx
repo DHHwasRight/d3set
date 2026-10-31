@@ -36,30 +36,30 @@ pub fn XYChart(width: f64, height: f64, axes: &XYAxes, margin: Margin, gradients
                 <defs>
                     for g in gradients {
                         <linearGradient x1="0" y1="0" x2="0" y2="1" id={&g.id}>
-                            <stop offset="0%" stop-opacity="0.4" stop-color={&g.color}></stop>
-                            <stop offset="60%" stop-opacity="0" stop-color={&g.color}></stop>
+                            <stop offset="0%" stop-opacity="0.4" style={format!("stop-color: {};", &g.color)}></stop>
+                            <stop offset="60%" stop-opacity="0" style={format!("stop-color: {};", &g.color)}></stop>
                         </linearGradient>
                     }
                 </defs>
             }
             <g>
                 for p in paths {
-                    <path fill={&p.fill} { ...[("fill-opacity", p.fill_opacity.as_deref())] } stroke={&p.stroke} { ...[("stroke-width", p.stroke_width.as_deref())] } d={&p.d}></path>
+                    <path { ...[("fill-opacity", p.fill_opacity.as_deref())] } { ...[("stroke-width", p.stroke_width.as_deref())] } d={&p.d} style={format!("fill: {}; stroke: {};", &p.fill, &p.stroke)}></path>
                 }
                 for r in rects {
-                    <rect x={&r.x} y={&r.y} height={&r.height} fill={&r.fill} width={&r.width}></rect>
+                    <rect x={&r.x} y={&r.y} height={&r.height} width={&r.width} style={format!("fill: {};", &r.fill)}></rect>
                 }
             </g>
             if let Some(lines) = lines {
                 <g>
                     for l in lines {
-                        <path class="d3s-area-line" fill={&l.fill} stroke={&l.stroke} { ...[("stroke-width", l.stroke_width.as_deref())] } d={&l.d}></path>
+                        <path class="d3s-area-line" { ...[("stroke-width", l.stroke_width.as_deref())] } d={&l.d} style={format!("fill: {}; stroke: {};", &l.fill, &l.stroke)}></path>
                     }
                 </g>
             }
             for m in markers {
                 <g class="d3s-marker" pointer-events="none" transform={&m.transform}>
-                    <line stroke-dasharray="4 3" stroke-width="1.5" x2={&m.x2} stroke={&m.color}></line>
+                    <line stroke-dasharray="4 3" stroke-width="1.5" x2={&m.x2} style={format!("stroke: {};", &m.color)}></line>
                     <text class="d3s-label-muted" text-anchor="end" dy="-0.35em" x={&m.x2} style={fill_style(&m.color)}>{m.label}</text>
                 </g>
             }

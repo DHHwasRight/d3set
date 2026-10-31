@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import type { Row } from "../data/types";
-import type { Theme } from "../theme/theme";
+import { fnv1a, lightDark, namedVar, type Theme } from "../theme/theme";
 import type { Aggregate, ChartContext, ChartSpec, Level, Threshold } from "./types";
 import { isDimmed, noInteractions, type Interactions, type RangeValue } from "./interactions";
 
@@ -242,8 +242,12 @@ export function matchThreshold(value: number, rules: Threshold[] = []): Threshol
   });
 }
 
-export function levelColor(theme: Theme, level: Level): string {
-  return level === "ok" ? theme.color.positive : level === "warning" ? theme.color.warning : theme.color.negative;
+/**
+ * A status color, as a CSS var. Every color a chart draws is a `var(--d3s-…)` (or a mix of them),
+ * so it follows the theme's light and dark values with no redraw.
+ */
+export function levelColor(_theme: Theme, level: Level): string {
+  return level === "ok" ? "var(--d3s-positive)" : level === "warning" ? "var(--d3s-warning)" : "var(--d3s-negative)";
 }
 
 /** Color of a threshold rule: its own color, else its level color. */
@@ -257,9 +261,54 @@ export function valueColor(theme: Theme, value: number, rules: Threshold[] | und
   return t ? thresholdColor(theme, t) : fallback;
 }
 
-/** Readable text color on a filled shape. */
-export function textOn(fill: string): string {
-  return d3.hsl(fill).l > 0.6 ? "#111" : "#fff";
+/**
+ * A color of the sequential scale at `t` in [0, 1]: a mix of `--d3s-seq-0` and `--d3s-seq-1`.
+ * The share is rounded to 0.1 %, like the server renderer.
+ */
+export function seqColor(t: number): string {
+  const p = Math.round(Math.min(1, Math.max(0, t)) * 1000) / 10;
+  return `color-mix(in oklab, var(--d3s-seq-1) ${p}%, var(--d3s-seq-0))`;
+}
+
+const TOKENS: Record<string, keyof Theme["color"]> = {
+  bg: "background",
+  surface: "surface",
+  text: "text",
+  "text-muted": "textMuted",
+  grid: "grid",
+  axis: "axis",
+  accent: "accent",
+  positive: "positive",
+  warning: "warning",
+  negative: "negative",
+};
+
+/** The color a chart color stands for, in light (`dark` false) or dark mode. */
+export function resolveColor(theme: Theme, color: string, dark: boolean): string {
+  const c = theme.color;
+  const d = dark ? (theme.dark ?? {}) : {};
+  let m = /^var\(--d3s-series-(\d+)\)$/.exec(color);
+  if (m) return d.series?.[+m[1]!] ?? c.series[+m[1]!]!;
+  m = /^var\(--d3s-named-([0-9a-f]{8})\)$/.exec(color);
+  if (m) {
+    const name = Object.keys(c.named ?? {}).find((k) => fnv1a(k) === m![1]);
+    return name === undefined ? "#000" : (d.named?.[name] ?? c.named![name]!);
+  }
+  m = /^color-mix\(in oklab, var\(--d3s-seq-1\) ([\d.]+)%, var\(--d3s-seq-0\)\)$/.exec(color);
+  if (m) {
+    const [a, b] = d.sequential ?? c.sequential;
+    return d3.interpolateLab(a, b)(Number(m[1]) / 100);
+  }
+  m = /^var\(--d3s-([a-z-]+)\)$/.exec(color);
+  const token = m ? TOKENS[m[1]!] : undefined;
+  if (token) return ((d[token] ?? c[token]) as string) ?? color;
+  return color;
+}
+
+/** Readable text color on a filled shape, in both modes: `light-dark(…)` when they differ. */
+export function textOn(theme: Theme, fill: string): string {
+  const on = (dark: boolean) => (d3.hsl(resolveColor(theme, fill, dark)).l > 0.6 ? "#111" : "#fff");
+  return lightDark(on(false), theme.dark ? on(true) : undefined);
 }
 
 /** Transition length. 0 when the user asks for reduced motion. */
@@ -271,15 +320,7 @@ export function motionMs(theme: Theme): number {
 /** Natural sort for labels: `host-2` before `host-10`. */
 export const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
-/**
- * FNV-1a 32-bit over the UTF-16 code units of `s` (what `charCodeAt` gives), as 8 hex digits.
- * The server renderer computes the same hash, so ids made from it match after hydration.
- */
-export function fnv1a(s: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
-  return (h >>> 0).toString(16).padStart(8, "0");
-}
+export { fnv1a };
 
 /** Id of the area gradient of series number `i` (in name order): unique per chart spec and series. */
 export function gradientId(spec: ChartSpec, i: number): string {
@@ -299,21 +340,26 @@ export function stableColors() {
     const named = theme.color.named ?? {};
     const fixed = (k: string) => Object.prototype.hasOwnProperty.call(named, k);
     for (const k of [...keys].sort(byName)) if (!fixed(k) && !assigned.has(k)) assigned.set(k, assigned.size);
-    const palette = theme.color.series;
+    const size = theme.color.series.length;
     return (k: string) => {
-      if (fixed(k)) return named[k]!;
+      if (fixed(k)) return `var(${namedVar(k)})`;
       if (!assigned.has(k)) assigned.set(k, assigned.size);
-      return palette[assigned.get(k)! % palette.length]!;
+      return `var(--d3s-series-${assigned.get(k)! % size})`;
     };
   };
 }
 
 export function seriesColor(theme: Theme, keys: string[]) {
-  return d3.scaleOrdinal<string, string>().domain(keys).range(theme.color.series);
+  return d3
+    .scaleOrdinal<string, string>()
+    .domain(keys)
+    .range(theme.color.series.map((_, i) => `var(--d3s-series-${i})`));
 }
 
-export function sequentialColor(theme: Theme, domain: [number, number]) {
-  return d3.scaleSequential(d3.interpolateLab(...theme.color.sequential)).domain(domain);
+/** The sequential scale over `domain`, as `seqColor`. A collapsed domain maps to the middle. */
+export function sequentialColor(_theme: Theme, domain: [number, number]) {
+  const [a, b] = domain;
+  return (x: number) => seqColor(a === b ? 0.5 : (x - a) / (b - a));
 }
 
 export function aggregate(values: number[], how: Aggregate): number {
@@ -487,7 +533,7 @@ export function renderMarkers(
   g.attr("transform", (t) => `translate(0,${y(t.value)})`);
   g.select("line")
     .attr("x2", w)
-    .attr("stroke", (t) => thresholdColor(theme, t));
+    .style("stroke", (t) => thresholdColor(theme, t));
   g.select("text")
     .attr("x", w)
     .style("fill", (t) => thresholdColor(theme, t))

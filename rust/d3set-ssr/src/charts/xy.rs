@@ -294,12 +294,10 @@ pub fn markers(c: &Ctx, y: &Linear, w: f64, fmt: &Format) -> Vec<Marker> {
         .collect()
 }
 
-fn threshold_color(theme: &Theme, color: Option<&str>, level: Option<Level>) -> String {
-    match (color, level.unwrap_or(Level::Critical)) {
-        (Some(c), _) => c.to_string(),
-        (None, Level::Ok) => theme.positive.to_string(),
-        (None, Level::Warning) => theme.warning.to_string(),
-        (None, Level::Critical) => theme.negative.to_string(),
+fn threshold_color(_theme: &Theme, color: Option<&str>, level: Option<Level>) -> String {
+    match color {
+        Some(c) => c.to_string(),
+        None => crate::color::level_var(level.unwrap_or(Level::Critical)).to_string(),
     }
 }
 

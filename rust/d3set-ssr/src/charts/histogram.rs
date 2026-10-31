@@ -44,14 +44,9 @@ pub(crate) fn nice(domain: [f64; 2], count: f64) -> [f64; 2] {
     domain
 }
 
-/// `sequentialColor(theme, domain)(x)`. d3's sequential scale maps every value of a collapsed
-/// domain to the middle of the interpolator (0.5); `color::sequential` maps it to 0.
+/// `sequentialColor(theme, domain)(x)`.
 pub(crate) fn sequential(theme: &crate::theme::Theme, domain: [f64; 2], x: f64) -> String {
-    if domain[0] == domain[1] {
-        crate::color::interpolate_lab(theme.sequential[0], theme.sequential[1], 0.5).css()
-    } else {
-        crate::color::sequential(theme, domain, x)
-    }
+    crate::color::sequential(theme, domain, x)
 }
 
 /// A `Linear` scale with a d3-niced domain.

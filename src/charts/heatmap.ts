@@ -63,7 +63,7 @@ export const heatmapChart: ChartFactory = (el, spec, ctx) => {
       .call((s) => bindTooltip(s, tooltip, (c) => [`${c.row} · ${c.x}`, fmt(c.value)]))
       .call((s) => bindSelect(s, ix, xField, (c) => c.x))
       .attr("opacity", (c) => dimOpacity(ix, xField, c.x))
-      .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("fill", (c) => color(c.value)));
+      .call((s) => animate(s, animated ? motionMs(theme) : 0).style("fill", (c) => color(c.value)));
   }
 
   return {

@@ -8,7 +8,7 @@ pub fn TimeHeatmap(width: f64, height: f64, axes: &XYAxes, margin: Margin, cells
         <XY axes={axes} margin={margin}>
             <g>
                 for c in cells {
-                    <rect x={&c.x} width={&c.width} y={&c.y} height={&c.height} fill={&c.fill}></rect>
+                    <rect x={&c.x} width={&c.width} y={&c.y} height={&c.height} style={format!("fill: {};", &c.fill)}></rect>
                 }
             </g>
         </XY>

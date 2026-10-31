@@ -109,15 +109,10 @@ fn points(c: &Ctx, x_field: &str, y_field: &str, how: Agg) -> Result<Vec<(f64, f
 }
 
 /// `thresholdColor` of the first matching rule, as `valueColor(theme, v, rules, "")`.
-pub fn value_color(theme: &Theme, v: f64, rules: &[Threshold]) -> Option<String> {
+pub fn value_color(_theme: &Theme, v: f64, rules: &[Threshold]) -> Option<String> {
     rules.iter().find(|t| t.matches(v)).map(|t| {
         t.color.clone().unwrap_or_else(|| {
-            match t.level.unwrap_or(Level::Critical) {
-                Level::Ok => theme.positive,
-                Level::Warning => theme.warning,
-                Level::Critical => theme.negative,
-            }
-            .to_string()
+            crate::color::level_var(t.level.unwrap_or(Level::Critical)).to_string()
         })
     })
 }

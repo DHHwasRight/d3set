@@ -1,29 +1,43 @@
 /* The gallery: a documentation layout. Ink text, a blurple accent, quiet borders. */
 
 :root {
-  --ink: #0a2540;
-  --text: #425466;
-  --muted: #697386;
-  --line: #e6ebf1;
-  --stage: #f6f9fc;
-  --accent: #635bff;
-  --accent-soft: #efedff;
-  --code-bg: #0a2540;
+  /* Light and dark: `color-scheme` picks each pair. Without a choice it follows the system; the
+     theme switch sets data-theme on <html> (stored in localStorage, set before the first paint). */
+  color-scheme: light dark;
+  --ink: light-dark(#0a2540, #f6f9fc);
+  --text: light-dark(#425466, #adbdcc);
+  --muted: light-dark(#697386, #8d9aab);
+  --line: light-dark(#e6ebf1, #23364d);
+  --stage: light-dark(#f6f9fc, #0f2236);
+  --page: light-dark(#ffffff, #0a1929);
+  --surface: light-dark(#ffffff, #0d1e31);
+  --top: light-dark(rgb(255 255 255 / 0.92), rgb(10 25 41 / 0.92));
+  --accent: light-dark(#635bff, #9d97ff);
+  --accent-soft: light-dark(#efedff, #241f57);
+  --on-accent: light-dark(#ffffff, #0a1929);
+  --accent-line: light-dark(#c9c5ff, #4b45a8);
+  --live: light-dark(#0e8a5f, #3ecf8e);
+  --live-line: light-dark(#b7e4d3, #1d5a43);
+  --live-bg: light-dark(#edfaf4, #0c2b22);
+  --shadow: light-dark(rgb(10 37 64 / 0.04), rgb(0 0 0 / 0.3));
+  --code-bg: light-dark(#0a2540, #061423);
   --code-text: #e6ebf1;
   --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif;
   --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; font: 15px/24px var(--font); color: var(--text); background: #fff; }
+body { margin: 0; font: 15px/24px var(--font); color: var(--text); background: var(--page); }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 code { font-family: var(--mono); font-size: 0.88em; color: var(--ink); background: var(--stage); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
 
 /* Top bar */
-.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 32px; height: 64px; padding: 0 24px; background: rgb(255 255 255 / 0.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 32px; height: 64px; padding: 0 24px; background: var(--top); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--ink); letter-spacing: -0.01em; }
 .brand:hover { text-decoration: none; }
 .brand-mark { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, #635bff 0%, #00a8e8 100%); }
@@ -32,7 +46,7 @@ code { font-family: var(--mono); font-size: 0.88em; color: var(--ink); backgroun
 .top-nav a:hover { color: var(--ink); text-decoration: none; }
 .top-nav a.is-current { color: var(--accent); border-bottom-color: var(--accent); }
 .top-search { margin-left: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 240px; padding: 6px 10px; font-size: 13px; color: var(--muted); background: var(--stage); border: 1px solid var(--line); border-radius: 6px; }
-.top-search kbd { font: 11px var(--mono); padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+.top-search kbd { font: 11px var(--mono); padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
 
 /* Shell */
 .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); }
@@ -60,13 +74,13 @@ h3 { margin: 0 0 4px; line-height: 24px; font-size: 15px; font-weight: 600; colo
 
 .callout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 8px; padding: 12px 16px; font-size: 14px; line-height: 22px; background: var(--stage); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); }
 .callout a { margin-left: auto; font-weight: 500; }
-.badge { display: inline-block; padding: 1px 8px; font-size: 12px; font-weight: 600; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; }
-.badge-live { color: #0e8a5f; border-color: #b7e4d3; background: #edfaf4; }
+.badge { display: inline-block; padding: 1px 8px; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+.badge-live { color: var(--live); border-color: var(--live-line); background: var(--live-bg); }
 .badge-live::before { content: "● "; }
 
 /* Examples */
 .example h2 { margin-top: 36px; }
-.figure { padding: 24px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 1px 2px rgb(10 37 64 / 0.04); }
+.figure { padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 1px 2px var(--shadow); }
 .figure figure { margin: 0; }
 details.code { margin-top: 10px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 details.code summary { cursor: pointer; padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--stage); }
@@ -89,7 +103,7 @@ details.code pre code, pre.block code { color: inherit; background: none; border
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
 .page:has(.thumbs) { max-width: 1080px; }
 .thumb { display: grid; grid-template-rows: auto 1fr; color: inherit; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s; }
-.thumb:hover { text-decoration: none; border-color: #c9c5ff; box-shadow: 0 4px 16px rgb(99 91 255 / 0.1); }
+.thumb:hover { text-decoration: none; border-color: var(--accent-line); box-shadow: 0 4px 16px rgb(99 91 255 / 0.1); }
 .thumb-chart { padding: 16px 16px 8px; height: 196px; overflow: hidden; pointer-events: none; }
 .thumb-chart figure { margin: 0; }
 .thumb-chart .d3s-legend { display: none; }
@@ -98,7 +112,7 @@ details.code pre code, pre.block code { color: inherit; background: none; border
 
 /* Dashboards: d3set cards on the page stage. */
 .dashboard { margin-top: 24px; }
-.dashboard .d3s-card { border: 1px solid var(--line); box-shadow: 0 1px 2px rgb(10 37 64 / 0.04); }
+.dashboard .d3s-card { border: 1px solid var(--line); box-shadow: 0 1px 2px var(--shadow); }
 
 @media (max-width: 960px) {
   .shell { grid-template-columns: 1fr; }
@@ -120,7 +134,19 @@ details.code summary .lang { margin-left: 6px; font: 600 11px var(--mono); color
 .library-switch { display: flex; align-items: center; gap: 2px; padding: 3px; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; }
 .library-switch a { padding: 3px 10px; color: var(--text); border-radius: 6px; white-space: nowrap; }
 .library-switch a:hover { text-decoration: none; background: var(--stage); }
-.library-switch a[aria-current="page"] { color: #fff; background: var(--accent); }
+.library-switch a[aria-current="page"] { color: var(--on-accent); background: var(--accent); }
+
+/* Theme switch: a sun in dark mode (go light), a moon in light mode (go dark). Same box in both. */
+.theme-switch { display: grid; margin-left: -20px; place-items: center; width: 34px; height: 34px; padding: 0; color: var(--text); background: none; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.theme-switch:hover { color: var(--ink); background: var(--stage); }
+.theme-switch svg { grid-area: 1 / 1; }
+.theme-switch .sun { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-switch .sun { display: block; }
+  :root:not([data-theme="light"]) .theme-switch .moon { display: none; }
+}
+:root[data-theme="dark"] .theme-switch .sun { display: block; }
+:root[data-theme="dark"] .theme-switch .moon { display: none; }
 
 /* Inline code does not stretch a line: monospace fonts have taller ascents than the text around them. */
 :where(p, .eyebrow, .lead, .muted, .callout, td, li) code { line-height: 1; }

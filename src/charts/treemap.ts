@@ -88,7 +88,7 @@ export const treemapChart: ChartFactory = (el, spec, ctx) => {
     tweenTranslate(cell, ms, (n) => [n.x0, n.y0]);
     cell
       .select("rect")
-      .attr("fill", (n) => color(groupOf(n)))
+      .style("fill", (n) => color(groupOf(n)))
       .attr("opacity", (n) => dimOpacity(ix, xField, n.data.name))
       .attr("rx", Math.min(3, theme.radius))
       .call((s) =>
@@ -108,7 +108,7 @@ export const treemapChart: ChartFactory = (el, spec, ctx) => {
       .attr("x", 6)
       .attr("y", 16)
       // Dark text on light tiles, light text on dark tiles.
-      .style("fill", (n) => textOn(color(groupOf(n))))
+      .style("fill", (n) => textOn(theme, color(groupOf(n))))
       .text((n) => (n.x1 - n.x0 > 40 && n.y1 - n.y0 > 20 ? `${n.data.name} ${fmt(n.value ?? 0)}` : ""));
 
     legend.update(allGroups, color, Boolean(spec.series));

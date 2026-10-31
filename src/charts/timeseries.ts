@@ -108,7 +108,7 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
           .attr("y", y(0))
           .attr("height", 0),
       )
-      .attr("fill", (b) => color(b.key))
+      .style("fill", (b) => color(b.key))
       .call((s) =>
         animate(s, ms)
           .attr("x", (b) => x(b.x as never))

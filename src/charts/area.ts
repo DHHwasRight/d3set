@@ -118,16 +118,16 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
       })
       .attr("id", (d) => fillId(d.key))
       .each(function (d) {
-        d3.select(this).selectAll("stop").attr("stop-color", color(d.key));
+        d3.select(this).selectAll("stop").style("stop-color", color(d.key));
       });
 
     areasG
       .selectAll<SVGPathElement, Band>("path")
       .data(bands, (d) => d.key)
       .join("path")
-      .attr("fill", (d) => (gradient ? `url(#${fillId(d.key)})` : color(d.key)))
+      .style("fill", (d) => (gradient ? `url(#${fillId(d.key)})` : color(d.key)))
       .attr("fill-opacity", gradient ? null : stacked ? 0.85 : 0.35)
-      .attr("stroke", (d) => (gradient ? "none" : color(d.key)))
+      .style("stroke", (d) => (gradient ? "none" : color(d.key)))
       .attr("stroke-width", gradient ? null : stacked ? 0 : 1.5)
       .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", (d) => area(d.points)));
 
@@ -142,8 +142,8 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
       .data(bands, (d) => d.key)
       .join("path")
       .attr("class", "d3s-area-line")
-      .attr("fill", "none")
-      .attr("stroke", (d) => color(d.key))
+      .style("fill", "none")
+      .style("stroke", (d) => color(d.key))
       .attr("stroke-width", 2)
       .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", (d) => topLine(d.points)));
 

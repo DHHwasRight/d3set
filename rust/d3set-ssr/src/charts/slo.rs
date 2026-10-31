@@ -35,7 +35,6 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let target = objective.target;
     let pct = Format::new(".2~%");
     let height = c.height(96);
-    let theme = c.theme;
 
     let values: Vec<f64> = c
         .rows
@@ -67,15 +66,19 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         };
         let ok = ratio * 100.0 >= target;
         let fill = if budget > 0.25 {
-            theme.positive
+            "var(--d3s-positive)"
         } else if budget > 0.0 {
-            theme.warning
+            "var(--d3s-warning)"
         } else {
-            theme.negative
+            "var(--d3s-negative)"
         };
         Slo {
             value: pct.format(ratio),
-            value_color: Some(if ok { theme.positive } else { theme.negative }),
+            value_color: Some(if ok {
+                "var(--d3s-positive)"
+            } else {
+                "var(--d3s-negative)"
+            }),
             meta: format!(
                 "Target {}% · Error budget left {}",
                 js_number(target),

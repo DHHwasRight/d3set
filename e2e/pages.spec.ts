@@ -86,6 +86,18 @@ test("the switch follows a navigation and opens the same page in the other galle
   await expect(page.locator(`nav.library-switch a[aria-current="page"]`)).toHaveAttribute("data-library", "vanilla");
 });
 
+test("the theme choice follows the library switch: one storage key on one origin", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/d3set/charts/bar/");
+  await page.locator("#theme-switch").click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  for (const { id, prefix } of LIBRARIES.filter((l) => l.id !== "rsx")) {
+    await page.goto(`${prefix}/charts/bar/`);
+    await expect(page.locator("html"), id).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("#theme-switch"), id).toHaveAttribute("aria-pressed", "true");
+  }
+});
+
 test("an unknown path answers the 404 page", async ({ page }) => {
   const res = await page.goto("/d3set/no-such-page/");
   expect(res?.status()).toBe(404);

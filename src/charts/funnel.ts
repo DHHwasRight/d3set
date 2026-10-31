@@ -87,7 +87,7 @@ export const funnelChart: ChartFactory = (el, spec, ctx) => {
       .select("rect")
       .attr("height", band.bandwidth())
       .attr("rx", Math.min(4, theme.radius))
-      .attr("fill", (s) => color(s.name))
+      .style("fill", (s) => color(s.name))
       .call((s) =>
         animate(s, ms)
           .attr("x", (s) => (w - width(s.value)) / 2)
@@ -97,7 +97,7 @@ export const funnelChart: ChartFactory = (el, spec, ctx) => {
       .select("text")
       .attr("x", w / 2)
       .attr("y", band.bandwidth() / 2)
-      .style("fill", (s) => textOn(color(s.name)))
+      .style("fill", (s) => textOn(theme, color(s.name)))
       .text((s) => `${s.name} · ${fmt(s.value)} · ${pct(s.ofFirst)}`);
   }
 

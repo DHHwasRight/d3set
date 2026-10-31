@@ -67,7 +67,7 @@ export const histogramChart: ChartFactory = (el, spec, ctx) => {
       .selectAll<SVGRectElement, d3.Bin<number, number>>("rect")
       .data(bins)
       .join((enter) => enter.append("rect").attr("y", h).attr("height", 0))
-      .attr("fill", "var(--d3s-accent)")
+      .style("fill", "var(--d3s-accent)")
       .attr("x", (b) => x(b.x0!) + 1)
       .attr("width", (b) => Math.max(0, x(b.x1!) - x(b.x0!) - 1))
       .call((s) =>

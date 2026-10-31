@@ -30,7 +30,8 @@ describe("hydrate", () => {
     expect(host.querySelector(".d3s-kpi-value")!.textContent).toBe("40");
     expect(host.querySelectorAll(".d3s-plot rect")).toHaveLength(2);
     const root = host.querySelector<HTMLElement>(".d3s-root")!;
-    expect(root.style.getPropertyValue("--d3s-accent")).toBe("#635bff");
+    // The server's accent in light mode, the default dark accent in dark mode.
+    expect(root.style.getPropertyValue("--d3s-accent")).toBe("light-dark(#635bff, #818cf8)");
     expect(root.hasAttribute("data-d3s-dashboard")).toBe(false);
     h.destroy();
   });

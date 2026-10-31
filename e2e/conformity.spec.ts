@@ -138,3 +138,36 @@ for (const path of ["/", "/charts/bar", "/analytics/usage"]) {
     }
   });
 }
+
+/** Light and dark: the same switch, storage key and head script as the Rust gallery. */
+test("the theme switch changes the theme, without a redraw, and the choice survives a reload", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await open(page, "/charts/bar");
+  const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const light = await bg();
+  const mark = await page.locator(".d3s-chart svg rect[style*='var(--d3s-series']").first().elementHandle();
+  const fill = () => mark!.evaluate((e) => getComputedStyle(e).fill);
+  const before = await fill();
+
+  await page.locator("#theme-switch").click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("#theme-switch")).toHaveAttribute("aria-pressed", "true");
+  expect(await bg()).not.toBe(light);
+  await expect.poll(fill).not.toBe(before);
+  expect(await mark!.evaluate((e) => e.isConnected), "the same element").toBe(true);
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.waitForFunction(() => document.documentElement.dataset.galleryReady === "true");
+  await expect(page.locator("#theme-switch")).toHaveAttribute("aria-pressed", "true");
+});
+
+test("a stored dark choice is applied by the head script: no flash", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.addInitScript(() => localStorage.setItem("d3set-theme", "dark"));
+  // No script file loads: only the inline head script can set the theme.
+  await page.route("**/*", (route) => (route.request().resourceType() === "script" ? route.abort() : route.continue()));
+  await page.goto("/charts/bar", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).not.toBe("rgb(255, 255, 255)");
+});

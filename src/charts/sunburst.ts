@@ -77,7 +77,7 @@ export const sunburstChart: ChartFactory = (el, spec, ctx) => {
     g.selectAll<SVGPathElement, Arc>("path")
       .data(nodes, keyOf)
       .join("path")
-      .attr("fill", (n) => color(groupOf(n)))
+      .style("fill", (n) => color(groupOf(n)))
       .attr("fill-opacity", (n) => (n.depth === 1 ? 1 : 0.6))
       .attr("opacity", (n) =>
         n.depth === 1 ? dimOpacity(ix, groupField, n.data.name) : dimOpacity(ix, xField, n.data.name),

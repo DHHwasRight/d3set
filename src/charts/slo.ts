@@ -8,7 +8,6 @@ import { matchThreshold, need } from "./util";
  * Shows the status, the target, and the error budget left.
  */
 export const sloChart: ChartFactory = (el, spec, ctx) => {
-  let theme = ctx.theme;
   const yField = need(spec, "y");
   if (!spec.objective) throw new Error(`d3set: chart type 'slo' requires field 'objective'.`);
   const { good, target } = spec.objective;
@@ -30,11 +29,11 @@ export const sloChart: ChartFactory = (el, spec, ctx) => {
     }
     const ok = ratio * 100 >= target;
     value.textContent = pct(ratio);
-    value.style.color = ok ? theme.color.positive : theme.color.negative;
+    value.style.color = ok ? "var(--d3s-positive)" : "var(--d3s-negative)";
     meta.textContent = `Target ${target}% · Error budget left ${pct(budget)}`;
     budgetBar.style.width = `${Math.max(0, Math.min(1, budget)) * 100}%`;
     budgetBar.style.background =
-      budget > 0.25 ? theme.color.positive : budget > 0 ? theme.color.warning : theme.color.negative;
+      budget > 0.25 ? "var(--d3s-positive)" : budget > 0 ? "var(--d3s-warning)" : "var(--d3s-negative)";
   }
 
   return {
@@ -50,8 +49,8 @@ export const sloChart: ChartFactory = (el, spec, ctx) => {
       }
       render();
     },
-    setTheme(next) {
-      theme = next;
+    // Colors are CSS vars: the theme's vars on the chart element change them.
+    setTheme() {
       render();
     },
     destroy: () => el.replaceChildren(),

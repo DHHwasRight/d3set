@@ -153,9 +153,9 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
                     format!(
                         "color: {};",
                         if good {
-                            c.theme.positive
+                            "var(--d3s-positive)"
                         } else {
-                            c.theme.negative
+                            "var(--d3s-negative)"
                         }
                     )
                 }),

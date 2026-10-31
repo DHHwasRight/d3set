@@ -29,5 +29,5 @@ pub mod views {
 pub use chart::{render, Error, Rendered};
 pub use dashboard::{figure, static_figure, Dashboard, Filter, Stream};
 pub use spec::{Agg, Column, Level, Spec, Threshold};
-pub use theme::{Theme, DARK, LIGHT};
+pub use theme::{Colors, Theme, DARK, DARK_COLORS, LIGHT};
 pub use value::{Row, Value};

@@ -23,7 +23,7 @@ export const toplistChart: ChartFactory = (el, spec, ctx) => {
       ...entries.map(([name, value], i) => {
         const bar = h("div", "d3s-toplist-bar");
         bar.style.width = `${(Math.abs(value) / max) * 100}%`;
-        bar.style.background = valueColor(theme, value, spec.thresholds, theme.color.accent);
+        bar.style.background = valueColor(theme, value, spec.thresholds, "var(--d3s-accent)");
         const row = h(
           "div",
           "d3s-toplist-row",

@@ -1,10 +1,11 @@
 // The gallery's only client script. dp-swap replaces parts of the page without running the scripts
 // inside them, so everything a page needs on the client starts here: hydration of the charts the
-// server rendered, closing the streams of the page you leave, the library switch, and the swap
-// ring. The shell loads this module once; every later page arrives through dp-swap events.
+// server rendered, closing the streams of the page you leave, the library switch, the theme switch,
+// and the swap ring. The shell loads this module once; every later page arrives through dp-swap events.
 
 import { hydrateCharts } from "./_src/hydrate.js";
 import { followPath } from "./_src/library-switch.js";
+import { themeSwitch } from "./_src/theme.js";
 
 // Count live streams before anything opens one. The d3set bundle reads `globalThis.EventSource`
 // when a source is created, so the wrapper sees every stream the charts open. The tests read the
@@ -58,6 +59,7 @@ function destroy(entry) {
 const ring = document.body.hasAttribute("data-swap-ring");
 
 followPath();
+themeSwitch();
 hydrate(document).catch((err) => console.error("gallery: first load:", err));
 
 // The region about to go: close its streams now, while its elements still exist to match. The

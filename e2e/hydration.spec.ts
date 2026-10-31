@@ -17,7 +17,9 @@ function snapshot(page: Page) {
             r(e.getAttribute("y")),
             r(e.getAttribute("width")),
             r(e.getAttribute("height")),
-            e.getAttribute("fill") ?? "",
+            // The color as drawn: charts write colors as `style` (theme variables), and an
+            // attribute or a style with the same value must compare equal.
+            getComputedStyle(e).fill,
             e.tagName === "text" ? e.textContent : "",
           ].join("|"),
         );

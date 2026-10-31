@@ -5,7 +5,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 
 use crate::agg::aggregate;
 use crate::chart::{Ctx, Error, Rendered};
-use crate::color::interpolate_lab;
+use crate::color::{level_var, seq_color};
 use crate::path::raw;
 use crate::spec::{Agg, Level, Threshold};
 use crate::theme::Theme;
@@ -68,12 +68,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let corner = c.theme.radius.min(4.0);
     let gauge_arc = |end: f64| arc(r * 0.72, r, -FRAC_PI_2, end, 0.0, corner);
 
-    let fallback = interpolate_lab(
-        c.theme.sequential[0],
-        c.theme.sequential[1],
-        0.35 + 0.65 * ((angle(value) + FRAC_PI_2) / PI),
-    )
-    .css();
+    let fallback = seq_color(0.35 + 0.65 * ((angle(value) + FRAC_PI_2) / PI));
     let fill = match c.spec.thresholds.iter().find(|t| t.matches(value)) {
         Some(t) => threshold_color(c.theme, t),
         None => fallback,
@@ -125,14 +120,9 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
 }
 
 /// `thresholdColor`: the rule's own color, else its level color (critical by default).
-fn threshold_color(theme: &Theme, t: &Threshold) -> String {
+fn threshold_color(_theme: &Theme, t: &Threshold) -> String {
     if let Some(color) = &t.color {
         return color.clone();
     }
-    match t.level.unwrap_or(Level::Critical) {
-        Level::Ok => theme.positive,
-        Level::Warning => theme.warning,
-        Level::Critical => theme.negative,
-    }
-    .to_string()
+    level_var(t.level.unwrap_or(Level::Critical)).to_string()
 }

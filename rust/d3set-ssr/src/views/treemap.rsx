@@ -7,7 +7,7 @@ pub fn Treemap(width: f64, height: f64, leaves: &[Leaf], radius: f64) -> Element
         <g>
             for l in leaves {
                 <g class="d3s-leaf" style="cursor: pointer;" transform={&l.transform}>
-                    <rect fill={l.fill} opacity="1" rx={raw(radius)} width={&l.width} height={&l.height}></rect>
+                    <rect opacity="1" rx={raw(radius)} width={&l.width} height={&l.height} style={format!("fill: {};", l.fill)}></rect>
                     <clipPath id={&l.clip_id}><rect width={&l.width} height={&l.height}></rect></clipPath>
                     <text class="d3s-label" clip-path={clip_url(&l.clip_id)} x="6" y="16" style={text_style(l.text_fill)}>{l.label}</text>
                 </g>

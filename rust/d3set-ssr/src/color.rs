@@ -1,4 +1,8 @@
 //! Colors: Lab interpolation (`d3.interpolateLab`), sequential scales, and stable series colors.
+//!
+//! Every color a chart draws is a CSS var (`var(--d3s-series-0)`) or a mix of them, the same
+//! strings the TypeScript library writes. The theme's vars hold `light-dark(…)` pairs, so a chart
+//! follows the page's `color-scheme` with no redraw.
 
 use crate::theme::Theme;
 
@@ -106,17 +110,101 @@ pub fn interpolate_lab(a: &str, b: &str, t: f64) -> Rgb {
     ])
 }
 
-/// `d3.scaleSequential(d3.interpolateLab(...theme.color.sequential)).domain(domain)`.
-pub fn sequential(theme: &Theme, domain: [f64; 2], x: f64) -> String {
-    let [a, b] = domain;
-    // d3.scaleSequential maps a collapsed domain to the middle of the interpolator.
-    let t = if a == b { 0.5 } else { (x - a) / (b - a) };
-    interpolate_lab(theme.sequential[0], theme.sequential[1], t).css()
+/// A color of the sequential scale at `t` in [0, 1]: a mix of `--d3s-seq-0` and `--d3s-seq-1`,
+/// the share rounded to 0.1 % (TS `seqColor`).
+pub fn seq_color(t: f64) -> String {
+    // `+ 0.0` turns -0 into 0, which JavaScript prints as "0".
+    let p = (t.clamp(0.0, 1.0) * 1000.0).round() / 10.0 + 0.0;
+    format!("color-mix(in oklab, var(--d3s-seq-1) {p}%, var(--d3s-seq-0))")
 }
 
-/// Readable text on a fill, like `textOn` in the TypeScript library.
-pub fn text_on(fill: &str) -> &'static str {
-    let c = if let Some(rest) = fill.strip_prefix("rgb(") {
+/// The sequential scale over `domain` at `x` (TS `sequentialColor`). A collapsed domain maps to
+/// the middle, like `d3.scaleSequential`.
+pub fn sequential(_theme: &Theme, domain: [f64; 2], x: f64) -> String {
+    let [a, b] = domain;
+    seq_color(if a == b { 0.5 } else { (x - a) / (b - a) })
+}
+
+/// A status color, as a CSS var (TS `levelColor`).
+pub fn level_var(level: crate::spec::Level) -> &'static str {
+    match level {
+        crate::spec::Level::Ok => "var(--d3s-positive)",
+        crate::spec::Level::Warning => "var(--d3s-warning)",
+        crate::spec::Level::Critical => "var(--d3s-negative)",
+    }
+}
+
+/// The color a chart color stands for, in light or dark mode (TS `resolveColor`).
+pub fn resolve(theme: &Theme, color: &str, dark: bool) -> String {
+    let d = if dark { theme.dark } else { None };
+    if let Some(i) = color
+        .strip_prefix("var(--d3s-series-")
+        .and_then(|r| r.strip_suffix(')'))
+        .and_then(|i| i.parse::<usize>().ok())
+    {
+        return d
+            .and_then(|d| d.series.get(i).copied())
+            .or_else(|| theme.series.get(i).copied())
+            .unwrap_or("#000")
+            .to_string();
+    }
+    if let Some(h) = color
+        .strip_prefix("var(--d3s-named-")
+        .and_then(|r| r.strip_suffix(')'))
+    {
+        let Some((name, light)) = theme
+            .named
+            .iter()
+            .find(|(n, _)| crate::charts::xy::fnv1a(n) == h)
+        else {
+            return "#000".to_string();
+        };
+        let dark = if dark { theme.dark_named(name) } else { None };
+        return dark.unwrap_or(light).to_string();
+    }
+    if let Some(p) = color
+        .strip_prefix("color-mix(in oklab, var(--d3s-seq-1) ")
+        .and_then(|r| r.strip_suffix("%, var(--d3s-seq-0))"))
+        .and_then(|p| p.parse::<f64>().ok())
+    {
+        let [a, b] = d.map_or(theme.sequential, |d| d.sequential);
+        return interpolate_lab(a, b, p / 100.0).css();
+    }
+    let token = |light: &'static str, dark: Option<&'static str>| dark.unwrap_or(light).to_string();
+    match color {
+        "var(--d3s-bg)" => token(theme.background, d.map(|d| d.background)),
+        "var(--d3s-surface)" => token(theme.surface, d.map(|d| d.surface)),
+        "var(--d3s-text)" => token(theme.text, d.map(|d| d.text)),
+        "var(--d3s-text-muted)" => token(theme.text_muted, d.map(|d| d.text_muted)),
+        "var(--d3s-grid)" => token(theme.grid, d.map(|d| d.grid)),
+        "var(--d3s-axis)" => token(theme.axis, d.map(|d| d.axis)),
+        "var(--d3s-accent)" => token(theme.accent, d.map(|d| d.accent)),
+        "var(--d3s-positive)" => token(theme.positive, d.map(|d| d.positive)),
+        "var(--d3s-warning)" => token(theme.warning, d.map(|d| d.warning)),
+        "var(--d3s-negative)" => token(theme.negative, d.map(|d| d.negative)),
+        other => other.to_string(),
+    }
+}
+
+/// Readable text on a fill, in both modes, like `textOn` in the TypeScript library.
+pub fn text_on(theme: &Theme, fill: &str) -> &'static str {
+    let on = |dark: bool| {
+        if parse(&resolve(theme, fill, dark)).lightness() > 0.6 {
+            "#111"
+        } else {
+            "#fff"
+        }
+    };
+    match (on(false), theme.dark.map(|_| on(true))) {
+        ("#111", Some("#fff")) => "light-dark(#111, #fff)",
+        ("#fff", Some("#111")) => "light-dark(#fff, #111)",
+        (light, _) => light,
+    }
+}
+
+/// `#rgb`, `#rrggbb` or `rgb(r, g, b)`.
+fn parse(color: &str) -> Rgb {
+    if let Some(rest) = color.strip_prefix("rgb(") {
         let parts: Vec<f64> = rest
             .trim_end_matches(')')
             .split(',')
@@ -128,13 +216,26 @@ pub fn text_on(fill: &str) -> &'static str {
             parts.get(2).copied().unwrap_or(0.0),
         )
     } else {
-        Rgb::hex(fill)
-    };
-    if c.lightness() > 0.6 {
-        "#111"
-    } else {
-        "#fff"
+        Rgb::hex(color)
     }
+}
+
+/// A `&'static str` for a var. The set is bounded (palette indices and the names a theme fixes),
+/// so the strings live as long as the process.
+fn intern(s: String) -> &'static str {
+    use std::collections::HashSet;
+    use std::sync::{Mutex, OnceLock};
+    static SET: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+    let mut set = SET
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    if let Some(found) = set.get(s.as_str()) {
+        return found;
+    }
+    let leaked: &'static str = Box::leak(s.into_boxed_str());
+    set.insert(leaked);
+    leaked
 }
 
 /// Series colors as the browser assigns them on a first render: a key the theme names gets its
@@ -142,7 +243,7 @@ pub fn text_on(fill: &str) -> &'static str {
 /// The TypeScript `stableColors` keeps these assignments when live data adds keys later.
 pub struct SeriesColors<'t> {
     keys: Vec<String>,
-    palette: &'t [&'static str],
+    size: usize,
     named: &'t [(&'static str, &'static str)],
 }
 
@@ -157,21 +258,22 @@ impl<'t> SeriesColors<'t> {
         keys.dedup();
         Self {
             keys,
-            palette: theme.series,
+            size: theme.series.len().max(1),
             named: theme.named,
         }
     }
 
+    /// `var(--d3s-series-<i>)`, or `var(--d3s-named-<hash>)` for a name the theme fixes.
     pub fn get(&self, key: &str) -> &'static str {
-        if let Some((_, c)) = self.named.iter().find(|(n, _)| *n == key) {
-            return c;
+        if self.named.iter().any(|(n, _)| *n == key) {
+            return intern(format!("var({})", crate::theme::named_var(key)));
         }
         let i = self
             .keys
             .iter()
             .position(|k| k == key)
             .unwrap_or(self.keys.len());
-        self.palette[i % self.palette.len()]
+        intern(format!("var(--d3s-series-{})", i % self.size))
     }
 }
 
@@ -187,9 +289,39 @@ mod tests {
         };
         let keys = ["New", "Churn", "Expansion"].map(String::from);
         let colors = SeriesColors::new(&theme, &keys);
-        assert_eq!(colors.get("Churn"), "#dc3309");
-        assert_eq!(colors.get("Expansion"), theme.series[0]);
-        assert_eq!(colors.get("New"), theme.series[1]);
+        assert_eq!(
+            colors.get("Churn"),
+            format!("var({})", crate::theme::named_var("Churn"))
+        );
+        assert_eq!(colors.get("Expansion"), "var(--d3s-series-0)");
+        assert_eq!(colors.get("New"), "var(--d3s-series-1)");
+        assert_eq!(resolve(&theme, colors.get("Churn"), false), "#dc3309");
+    }
+
+    #[test]
+    fn a_sequential_color_is_a_mix_rounded_to_a_tenth_of_a_percent() {
+        assert_eq!(
+            seq_color(1.0 / 3.0),
+            "color-mix(in oklab, var(--d3s-seq-1) 33.3%, var(--d3s-seq-0))"
+        );
+        assert_eq!(
+            seq_color(0.0),
+            "color-mix(in oklab, var(--d3s-seq-1) 0%, var(--d3s-seq-0))"
+        );
+        assert_eq!(
+            seq_color(2.0),
+            "color-mix(in oklab, var(--d3s-seq-1) 100%, var(--d3s-seq-0))"
+        );
+    }
+
+    #[test]
+    fn text_on_a_fill_follows_both_modes() {
+        // Series 0: indigo in light mode, light indigo in dark mode.
+        assert_eq!(
+            text_on(&crate::theme::LIGHT, "var(--d3s-series-0)"),
+            "light-dark(#fff, #111)"
+        );
+        assert_eq!(text_on(&crate::theme::DARK, "var(--d3s-series-0)"), "#111");
     }
 
     #[test]

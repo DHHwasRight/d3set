@@ -17,7 +17,6 @@ interface Change {
  * against the window before it, per `series` value. "Now" is the newest `x` timestamp in the data.
  */
 export const changeChart: ChartFactory = (el, spec, ctx) => {
-  let theme = ctx.theme;
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const win = parseInterval(spec.window ?? "1h");
@@ -74,7 +73,7 @@ export const changeChart: ChartFactory = (el, spec, ctx) => {
           "d3s-change-delta",
           `${c.delta === 0 ? "■" : c.delta > 0 ? "▲" : "▼"} ${fmt(Math.abs(c.delta))}${c.ratio === undefined ? "" : ` (${pct(c.ratio)})`}`,
         );
-        if (c.delta !== 0) delta.style.color = good(c.delta) ? theme.color.positive : theme.color.negative;
+        if (c.delta !== 0) delta.style.color = good(c.delta) ? "var(--d3s-positive)" : "var(--d3s-negative)";
         const row = h(
           "div",
           "d3s-change-row",
@@ -94,8 +93,8 @@ export const changeChart: ChartFactory = (el, spec, ctx) => {
       changes = compute(rows);
       render();
     },
-    setTheme(next) {
-      theme = next;
+    // Colors are CSS vars: the theme's vars on the chart element change them.
+    setTheme() {
       render();
     },
     destroy: () => body.remove(),

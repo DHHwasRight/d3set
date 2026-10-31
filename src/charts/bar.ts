@@ -214,7 +214,7 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
         (exit) => apply(animate(exit, ms) as never, flat).remove(),
       )
       .attr("rx", Math.min(3, theme.radius))
-      .attr("fill", (b) => color(b.series))
+      .style("fill", (b) => color(b.series))
       .attr("opacity", (b) => dimOpacity(ix, xField, b.category))
       .call((s) => bindSelect(s, ix, xField, (b) => b.category))
       .call((s) => bindTooltip(s, tooltip, (b) => [b.category, `${b.series}: ${fmt(b.value)}`]))

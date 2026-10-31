@@ -78,7 +78,7 @@ export const timeheatmapChart: ChartFactory = (el, spec, ctx) => {
       .attr("width", (c) => Math.max(1, x(new Date(c.t + step)) - x(new Date(c.t)) - 1))
       .attr("y", (c) => y(c.hi))
       .attr("height", (c) => Math.max(1, y(c.lo) - y(c.hi) - 1))
-      .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("fill", (c) => color(c.count)));
+      .call((s) => animate(s, animated ? motionMs(theme) : 0).style("fill", (c) => color(c.count)));
   }
 
   return {

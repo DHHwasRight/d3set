@@ -83,7 +83,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
                 x: raw((w - width.map(*value)) / 2.0),
                 width: raw(width.map(*value)),
                 fill,
-                text_fill: text_on(fill),
+                text_fill: text_on(c.theme, fill),
                 label: format!(
                     "{name} · {} · {}",
                     fmt.format(*value),

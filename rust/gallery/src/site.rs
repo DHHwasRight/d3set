@@ -145,3 +145,9 @@ pub fn inline_code(text: &str) -> String {
     }
     out
 }
+
+/// The head script that applies a stored theme choice before the first paint. Without a choice,
+/// `color-scheme: light dark` follows the system. The framework galleries carry the same script
+/// (`galleries/shared/src/theme.ts`), with the same storage key, so the choice follows the
+/// library switch on one origin.
+pub const THEME_SCRIPT: &str = r#"try{var t=localStorage.getItem("d3set-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}"#;

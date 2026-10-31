@@ -59,8 +59,6 @@ function normalize(root: Element) {
         "width",
         "height",
         "d",
-        "fill",
-        "stroke",
         "cx",
         "cy",
         "r",
@@ -71,10 +69,14 @@ function normalize(root: Element) {
         "opacity",
         "fill-opacity",
       ];
-      const attrs = keep
-        .filter((a) => e.hasAttribute(a))
-        .map((a) => `${a}=${e.getAttribute(a)}`)
-        .join(" ");
+      // Colors are inline styles (`fill: var(--d3s-series-0)`): an attribute cannot hold a var.
+      const colors = ["fill", "stroke", "stop-color"]
+        .map((p) => [p, (e as SVGElement).style?.getPropertyValue(p) || e.getAttribute(p)] as const)
+        .filter(([, v]) => v)
+        .map(([p, v]) => `${p}=${v}`);
+      const attrs = [...keep.filter((a) => e.hasAttribute(a)).map((a) => `${a}=${e.getAttribute(a)}`), ...colors].join(
+        " ",
+      );
       const text = e.tagName.toLowerCase() === "text" ? ` "${e.textContent}"` : "";
       return `${e.tagName.toLowerCase()} ${attrs}${text}`;
     });

@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The stored theme choice, before the first paint (galleries/shared/src/theme.ts THEME_SCRIPT). -->
+    <script>
+      try{var t=localStorage.getItem("d3set-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}
+    </script>
     <title>d3set</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/css/d3set.css" />

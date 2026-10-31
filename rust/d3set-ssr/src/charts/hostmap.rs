@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use crate::agg::{aggregate, groups};
 use crate::chart::{Ctx, Error, Rendered};
 use crate::charts::toplist::{value_color, SELECTABLE};
-use crate::color::{interpolate_lab, sequential, text_on};
+use crate::color::{sequential, text_on};
 use crate::spec::Agg;
 use crate::value::Row;
 use crate::views;
@@ -80,14 +80,9 @@ fn primary(a: &str, b: &str, numeric: bool) -> Ordering {
     }
 }
 
-/// `d3.scaleSequential(interpolateLab(...)).domain(domain)(x)`. d3 uses the middle color (t = 0.5)
-/// when the domain is one value; `color::sequential` uses t = 0 there, so that case is handled here.
+/// `sequentialColor(theme, domain)(x)`.
 fn seq_color(c: &Ctx, domain: [f64; 2], x: f64) -> String {
-    if domain[0] == domain[1] {
-        interpolate_lab(c.theme.sequential[0], c.theme.sequential[1], 0.5).css()
-    } else {
-        sequential(c.theme, domain, x)
-    }
+    sequential(c.theme, domain, x)
 }
 
 /// One hexagon, ready for the template.
@@ -160,12 +155,12 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
                             seq_color(c, domain, *v)
                         }
                     } else {
-                        value_color(c.theme, *v, &c.spec.thresholds, c.theme.positive)
+                        value_color(c.theme, *v, &c.spec.thresholds, "var(--d3s-positive)")
                     };
                     let color = if fill.is_empty() {
                         "#fff"
                     } else {
-                        text_on(&fill)
+                        text_on(c.theme, &fill)
                     };
                     Hex {
                         title: format!("{name}: {}", fmt.format(*v)),

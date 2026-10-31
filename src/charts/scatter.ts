@@ -108,9 +108,9 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
         (d) => String(d.i),
       )
       .join((enter) => enter.append("circle").attr("r", 0))
-      .attr("fill", (d) => color(d.series))
+      .style("fill", (d) => color(d.series))
       .attr("fill-opacity", spec.size ? 0.55 : 0.75)
-      .attr("stroke", (d) => color(d.series))
+      .style("stroke", (d) => color(d.series))
       .attr("opacity", (d) => dimOpacity(ix, spec.series, d.series))
       .call((s) => bindSelect(s, ix, spec.series, (d) => d.series))
       .call((s) =>

@@ -64,10 +64,10 @@ export const pieChart: ChartFactory = (el, spec, ctx) => {
     g.selectAll<SVGPathElement, Slice>("path")
       .data(slices, (s) => s.data[0])
       .join("path")
-      .attr("fill", (s) => color(s.data[0]))
+      .style("fill", (s) => color(s.data[0]))
       .attr("opacity", (s) => dimOpacity(ix, xField, s.data[0]))
       .call((sel) => bindSelect(sel, ix, xField, (s) => s.data[0]))
-      .attr("stroke", "var(--d3s-surface)")
+      .style("stroke", "var(--d3s-surface)")
       .attr("stroke-width", 1)
       .call((sel) =>
         bindTooltip(sel, tooltip, (s) => [s.data[0], `${fmt(s.data[1])} (${pct(total ? s.data[1] / total : 0)})`]),

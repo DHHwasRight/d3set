@@ -30,11 +30,11 @@ export const hostmapChart: ChartFactory = (el, spec, ctx) => {
             "d3s-hostmap-tiles",
             ...list.map(([name, value]) => {
               const fill = spec.thresholds
-                ? valueColor(theme, value, spec.thresholds, theme.color.positive)
+                ? valueColor(theme, value, spec.thresholds, "var(--d3s-positive)")
                 : scale(value);
               const tile = h("div", "d3s-hex");
               tile.style.background = fill;
-              tile.style.color = textOn(fill);
+              tile.style.color = textOn(theme, fill);
               tile.title = `${name}: ${fmt(value)}`;
               tile.setAttribute("aria-label", tile.title);
               selectOnClick(tile, ix, xField, name);

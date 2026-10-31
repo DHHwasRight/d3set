@@ -103,7 +103,7 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
     tweenTranslate(g, ms, (b) => [x(b.category) ?? 0, 0]);
     const bw = x.bandwidth();
     g.select("line.whisker")
-      .attr("stroke", "var(--d3s-axis)")
+      .style("stroke", "var(--d3s-axis)")
       .attr("x1", bw / 2)
       .attr("x2", bw / 2)
       .call((s) =>
@@ -112,9 +112,9 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
           .attr("y2", (b) => y(b.hi)),
       );
     g.select("rect")
-      .attr("fill", (b) => color(b.category))
+      .style("fill", (b) => color(b.category))
       .attr("fill-opacity", 0.35)
-      .attr("stroke", (b) => color(b.category))
+      .style("stroke", (b) => color(b.category))
       .attr("rx", Math.min(3, theme.radius))
       .attr("width", bw)
       .call((s) =>
@@ -123,7 +123,7 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
           .attr("height", (b) => Math.max(1, y(b.q1) - y(b.q3))),
       );
     g.select("line.median")
-      .attr("stroke", (b) => color(b.category))
+      .style("stroke", (b) => color(b.category))
       .attr("stroke-width", 2)
       .attr("x2", bw)
       .call((s) =>
@@ -138,7 +138,7 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
       .attr("cy", (v) => y(v))
       .attr("r", 2.5)
       .attr("fill", "none")
-      .attr("stroke", "var(--d3s-text-muted)");
+      .style("stroke", "var(--d3s-text-muted)");
   }
 
   return {

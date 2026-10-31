@@ -32,11 +32,11 @@ pub(crate) fn threshold_color(theme: &Theme, t: &Threshold) -> String {
 }
 
 /// `levelColor`.
-pub(crate) fn level_color(theme: &Theme, level: &str) -> &'static str {
+pub(crate) fn level_color(_theme: &Theme, level: &str) -> &'static str {
     match level {
-        "ok" => theme.positive,
-        "warning" => theme.warning,
-        _ => theme.negative,
+        "ok" => "var(--d3s-positive)",
+        "warning" => "var(--d3s-warning)",
+        _ => "var(--d3s-negative)",
     }
 }
 
@@ -87,7 +87,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
                 bar_style: format!(
                     "width: {}%; background: {};",
                     js_number(value.abs() / max * 100.0),
-                    value_color(c.theme, *value, &c.spec.thresholds, c.theme.accent)
+                    value_color(c.theme, *value, &c.spec.thresholds, "var(--d3s-accent)")
                 ),
             }
         })

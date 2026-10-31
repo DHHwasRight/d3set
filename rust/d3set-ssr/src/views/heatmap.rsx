@@ -23,7 +23,7 @@ pub fn Heatmap(
             <AxisG axis={&axes.y} />
             <g class="d3s-plot">
                 for c in cells {
-                    <rect x={&c.x} y={&c.y} width={&cell_width} height={&cell_height} rx={&radius} opacity={c.opacity} fill={&c.fill}></rect>
+                    <rect x={&c.x} y={&c.y} width={&cell_width} height={&cell_height} rx={&radius} opacity={c.opacity} style={format!("fill: {};", &c.fill)}></rect>
                 }
             </g>
         </g>

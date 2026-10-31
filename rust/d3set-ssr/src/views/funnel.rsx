@@ -8,7 +8,7 @@ pub fn Funnel(width: f64, height: f64, margin: Margin, stages: &[Stage], bandwid
         <g transform={translate(margin)}>
             for s in stages {
                 <g class="d3s-stage" transform={&s.transform} opacity="1" style="cursor: pointer;">
-                    <rect x={&s.x} width={&s.width} height={raw(bandwidth)} rx={raw(radius)} fill={s.fill}></rect>
+                    <rect x={&s.x} width={&s.width} height={raw(bandwidth)} rx={raw(radius)} style={format!("fill: {};", s.fill)}></rect>
                     <text class="d3s-label" text-anchor="middle" dy="0.35em" x={raw(mid)} y={raw(bandwidth / 2.0)} style={text_style(s.text_fill)}>{s.label}</text>
                 </g>
             }

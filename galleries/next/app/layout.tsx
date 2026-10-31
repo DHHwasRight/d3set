@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { readPage } from "../lib/fixtures";
 import { parseLibraries } from "@d3set/gallery-shared/libraries";
 import { siteFromEnv } from "@d3set/gallery-shared/site";
-import { FollowLibrarySwitch, Ready } from "./Ready";
+import { THEME_SCRIPT } from "@d3set/gallery-shared/theme";
+import { FollowLibrarySwitch, FollowThemeSwitch, Ready } from "./Ready";
 
 /** This gallery's path prefix: "" in dev, `/d3set/next` on GitHub Pages. */
 const { base } = siteFromEnv(process.env);
@@ -18,8 +19,11 @@ export const metadata: Metadata = { icons: { icon: { url: `${base}/favicon.svg`,
 export default function Layout({ children }: { children: ReactNode }) {
   const { bodyAttrs, headStyle, preload } = readPage("/");
   return (
-    <html lang="en">
+    // The head script sets data-theme before React hydrates: the attribute differs on purpose.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* The stored theme choice, before the first paint: no flash of the other theme. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         {preload.map((href) => (
           <link key={href} rel="preload" href={`${base}${href}`} as="font" type="font/woff2" crossOrigin="" />
         ))}
@@ -30,6 +34,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <body {...bodyAttrs}>
         {children}
         <Ready />
+        <FollowThemeSwitch />
         <FollowLibrarySwitch bases={parseLibraries(process.env.GALLERY_LIBRARIES)} own={base} />
       </body>
     </html>

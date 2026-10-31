@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { aggregate, createFrame, motionMs, need, thresholdColor, valueColor } from "./util";
+import { aggregate, createFrame, motionMs, need, seqColor, thresholdColor, valueColor } from "./util";
 
 /** A half-circle gauge of the aggregate of `y` (default `sum`) between `min` (default 0) and `max` (default 100).
  * `thresholds` color the arc and add ticks at their values. */
@@ -15,7 +15,7 @@ export const gaugeChart: ChartFactory = (el, spec, ctx) => {
 
   const frame = createFrame(el, spec.height ?? 160, () => draw(false), { top: 8, right: 8, bottom: 8, left: 8 });
   const g = frame.svg.append("g");
-  const track = g.append("path").attr("fill", "var(--d3s-grid)");
+  const track = g.append("path").style("fill", "var(--d3s-grid)");
   const bar = g.append("path");
   const ticks = g.append("g");
   const label = g.append("text").attr("class", "d3s-label").attr("text-anchor", "middle");
@@ -37,7 +37,6 @@ export const gaugeChart: ChartFactory = (el, spec, ctx) => {
       .outerRadius(r)
       .startAngle(-Math.PI / 2)
       .cornerRadius(Math.min(4, theme.radius));
-    const color = d3.interpolateLab(...theme.color.sequential);
 
     track.attr("d", arc({ endAngle: Math.PI / 2 }));
     const from = shown;
@@ -57,16 +56,16 @@ export const gaugeChart: ChartFactory = (el, spec, ctx) => {
           };
         });
     }
-    bar.attr(
+    bar.style(
       "fill",
-      valueColor(theme, value, spec.thresholds, color(0.35 + 0.65 * ((angle(value) + Math.PI / 2) / Math.PI))),
+      valueColor(theme, value, spec.thresholds, seqColor(0.35 + 0.65 * ((angle(value) + Math.PI / 2) / Math.PI))),
     );
     // Threshold ticks on the outer edge of the arc.
     ticks
       .selectAll("line")
       .data((spec.thresholds ?? []).filter((t) => t.value >= min && t.value <= max))
       .join("line")
-      .attr("stroke", (t) => thresholdColor(theme, t))
+      .style("stroke", (t) => thresholdColor(theme, t))
       .attr("stroke-width", 3)
       .attr("x1", (t) => Math.sin(angle(t.value)) * r * 0.68)
       .attr("y1", (t) => -Math.cos(angle(t.value)) * r * 0.68)

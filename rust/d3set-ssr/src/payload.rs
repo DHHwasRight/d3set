@@ -5,7 +5,7 @@
 
 use crate::dashboard::{Dashboard, Filter, Stream};
 use crate::spec::{Column, Spec, Threshold};
-use crate::theme::Theme;
+use crate::theme::{Colors, Theme};
 use crate::value::{Row, Value};
 
 jt::template! {
@@ -107,6 +107,25 @@ jt::template! {
 }
 
 jt::template! {
+    /// TS `theme.dark`: the colors in dark mode.
+    pub fn DarkJson(d: &Colors) -> Json {
+        "background": d.background,
+        "surface": d.surface,
+        "text": d.text,
+        "textMuted": d.text_muted,
+        "grid": d.grid,
+        "axis": d.axis,
+        "accent": d.accent,
+        "positive": d.positive,
+        "warning": d.warning,
+        "negative": d.negative,
+        "series": d.series,
+        "sequential": d.sequential,
+        if !d.named.is_empty() { "named": NamedJson(d.named) }
+    }
+}
+
+jt::template! {
     /// The TypeScript `Theme`, so the browser draws with the server's tokens.
     pub fn ThemeJson(t: &Theme) -> Json {
         "name": t.name,
@@ -126,6 +145,7 @@ jt::template! {
             "sequential": t.sequential,
             if !t.named.is_empty() { "named": NamedJson(t.named) }
         },
+        if let Some(d) = t.dark { "dark": DarkJson(d) }
         "space": { "xs": 4, "sm": t.space_sm, "md": t.space_md, "lg": 24 },
         "radius": t.radius,
         "motion": t.motion,

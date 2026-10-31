@@ -1,6 +1,7 @@
 import type { Page } from "@d3set/gallery-shared";
 import { fill } from "@d3set/gallery-shared/docs";
 import { followLibrarySwitch, markLibrary, parseLibraries } from "@d3set/gallery-shared/libraries";
+import { followThemeSwitch, syncThemeSwitch } from "@d3set/gallery-shared/theme";
 import { stripBase, withBase, withStreams } from "@d3set/gallery-shared/site";
 import snippets from "virtual:snippets";
 import { docs } from "./docs";
@@ -29,6 +30,9 @@ export function App() {
 
   useEffect(() => interceptLinks(), []);
   useEffect(() => followLibrarySwitch(libraries, site.base), []);
+  useEffect(() => followThemeSwitch(), []);
+  // Each page draws its own top bar, with the switch's state from the export: set it again.
+  useEffect(() => syncThemeSwitch(), [shown]);
 
   useEffect(() => {
     let alive = true;

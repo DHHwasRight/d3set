@@ -8,6 +8,7 @@
     ".": "./src/fixture.ts",
     "./docs": "./src/docs.ts",
     "./libraries": "./src/libraries.ts",
+    "./theme": "./src/theme.ts",
     "./highlight": "./src/highlight.ts",
     "./vite": "./src/vite.ts",
     "./site": "./src/site.ts"

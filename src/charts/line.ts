@@ -93,9 +93,10 @@ export const lineChart: ChartFactory = (el, spec, ctx) => {
       .selectAll<SVGPathElement, (typeof series)[number]>("path")
       .data(series, (d) => d[0])
       .join("path")
-      .attr("fill", "none")
       .attr("stroke-width", 2)
-      .attr("stroke", ([k]) => color(k))
+      // In `style`, like the stroke and like the Rust renderer's path: the first frame is the same.
+      .style("fill", "none")
+      .style("stroke", ([k]) => color(k))
       .call((s) => animate(s, animated ? motionMs(theme) : 0).attr("d", ([, pts]) => line(pts as Point[])));
 
     renderMarkers(layers.plot, y, w, theme, spec.thresholds, fmt);
