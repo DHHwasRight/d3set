@@ -39,6 +39,11 @@ export interface DashboardOptions {
   /** Initial time window. Default: `all`. */
   timeWindow?: string;
   /**
+   * When the rows were drawn, in ms since the epoch. The time window counts from it and moves on
+   * with the clock, so recorded rows (a static site) stay in the window. Default: the clock.
+   */
+  now?: number;
+  /**
    * Replace server-rendered markup in `root` (see `hydrate`). The first draw has no transition,
    * so the swap from server markup to live charts does not animate.
    */
@@ -130,6 +135,9 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
   const cleanups: Array<() => void> = [];
   const timeField = opts.timeField;
   let windowMs: number | undefined;
+  // The time of the data: the clock, moved to `now` when the rows were drawn at another time.
+  const offset = opts.now === undefined ? 0 : opts.now - Date.now();
+  const clock = () => Date.now() + offset;
   let paused = false;
   let frozen: Row[] | undefined;
   let pausedAt = 0;
@@ -300,7 +308,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
 
   function inWindow(rows: Row[]): Row[] {
     if (!timeField || windowMs === undefined) return rows;
-    const start = (paused ? pausedAt : Date.now()) - windowMs;
+    const start = (paused ? pausedAt : clock()) - windowMs;
     return rows.filter((r) => (asDate(r[timeField])?.getTime() ?? -Infinity) >= start);
   }
 
@@ -370,7 +378,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
     setPaused(next) {
       paused = next;
       frozen = paused ? opts.source.rows() : undefined;
-      pausedAt = Date.now();
+      pausedAt = clock();
       if (pauseButton) {
         pauseButton.textContent = paused ? "Resume" : "Pause";
         pauseButton.setAttribute("aria-pressed", String(paused));

@@ -4,7 +4,7 @@ import { createDashboard, staticSource, streamSource, type DashboardPayload } fr
 
 /** Draw the dashboard of `payload` in `el`. Returns what removes it. */
 export function drawDashboard(el: HTMLElement, payload: DashboardPayload): () => void {
-  const { charts, filters, filterMode, timeField, timeWindow, rows, theme, stream } = payload;
+  const { charts, filters, filterMode, timeField, timeWindow, now, rows, theme, stream } = payload;
   // The rows of the page, then the new rows of the stream if it has one (on GitHub Pages, a JSON
   // timeline polled with `transport: "poll"`).
   const source = stream ? streamSource(stream, rows ?? []) : staticSource(rows ?? []);
@@ -15,6 +15,7 @@ export function drawDashboard(el: HTMLElement, payload: DashboardPayload): () =>
     filterMode,
     timeField,
     timeWindow,
+    now,
     theme: typeof theme === "object" ? theme : undefined,
     hydrate: true,
   });

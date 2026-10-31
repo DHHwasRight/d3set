@@ -49,6 +49,8 @@ export interface RenderDashboardOptions {
   filterMode?: "client" | "server";
   timeField?: string;
   timeWindow?: string;
+  /** When the rows were drawn (ms since the epoch): the time window counts from it. */
+  now?: number;
   /** Write the payload `hydrate()` reads. `false`: static markup, no client code needed. */
   payload?: boolean;
 }
@@ -146,6 +148,7 @@ export function renderDashboard(opts: RenderDashboardOptions): string {
       filterMode: opts.filterMode,
       timeField: opts.timeField,
       timeWindow: opts.timeWindow,
+      now: opts.now,
       theme: { ...theme, motion: 0 },
       width: opts.width ?? 960,
     });
@@ -156,6 +159,7 @@ export function renderDashboard(opts: RenderDashboardOptions): string {
       filterMode: opts.filterMode,
       timeField: opts.timeField,
       timeWindow: opts.timeWindow,
+      now: opts.now,
       rows,
       theme,
       stream: opts.stream,

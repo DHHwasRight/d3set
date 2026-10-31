@@ -44,16 +44,18 @@ afterEach(() => {
 });
 
 describe("pollSource with a timeline", () => {
-  it("starts on the frame the clock points to, then plays one frame per tick", async () => {
-    // 4 frames of 1000 ms: at 6500 ms the clock is on step 6, frame 6 % 4 = 2.
+  it("starts on the first frame whatever the clock says, then plays one frame per tick", async () => {
+    // The frames continue the page's rows: a page opened at any time starts on frame 0.
     vi.setSystemTime(6500);
     const s = server({ interval: 1000, frames: frames(4) });
     const src = pollSource({ url: "http://x/feed.json", fetch: s.fetch, mode: "replace" });
     await vi.advanceTimersByTimeAsync(0);
-    expect(ids(src.rows())).toEqual([2]);
-    // The next frame comes on the next boundary (7000), not 1000 ms after the start.
-    await vi.advanceTimersByTimeAsync(500);
+    expect(ids(src.rows())).toEqual([0]);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(ids(src.rows())).toEqual([1]);
+    await vi.advanceTimersByTimeAsync(2000);
     expect(ids(src.rows())).toEqual([3]);
+    // After the last frame, the loop starts again.
     await vi.advanceTimersByTimeAsync(1000);
     expect(ids(src.rows())).toEqual([0]);
     src.close();

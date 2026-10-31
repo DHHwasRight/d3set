@@ -8,7 +8,8 @@ pub fn DashboardPage(title: &str, lead: &str, markup: &str, js: bool, path: &str
         <div class="callout">
             if js {
                 <span class="badge badge-live">Live</span>
-                {rows} rows<span data-snippet="rendered">{rendered()}</span>. Click a bar, slice, row, or tile to cross-filter; drag on a time chart to zoom.
+                // One flex item: the callout is a flex row, and loose text beside a span would wrap apart.
+                <span>{rows} rows<span data-snippet="rendered">{rendered()}</span>. Click a bar, slice, row, or tile to cross-filter; drag on a time chart to zoom.</span>
                 if !is_static() {
                     <a href={off_href(path)} dp-boost="false">View without JavaScript</a>
                 }

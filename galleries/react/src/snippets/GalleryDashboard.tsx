@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function GalleryDashboard({ dashboard, className, style, onReady }: Props) {
-  const { charts, filters, filterMode, timeField, timeWindow, rows, theme, stream } = dashboard;
+  const { charts, filters, filterMode, timeField, timeWindow, now, rows, theme, stream } = dashboard;
   // On GitHub Pages, new rows from a JSON timeline polled with `transport: "poll"`.
   const source = useStreamSource(stream, rows);
   return (
@@ -24,6 +24,7 @@ export function GalleryDashboard({ dashboard, className, style, onReady }: Props
       filterMode={filterMode}
       timeField={timeField}
       timeWindow={timeWindow}
+      now={now}
       rows={rows}
       source={source}
       theme={typeof theme === "object" ? theme : undefined}

@@ -150,6 +150,7 @@ jt::template! {
         "filterMode"?: d.filter_mode,
         "timeField"?: d.time_field.as_deref(),
         "timeWindow"?: d.time_window.as_deref(),
+        "now"?: d.now,
         if let Some(s) = &d.stream { "stream": StreamJson(s) }
         "rows": RowsJson(rows),
     }

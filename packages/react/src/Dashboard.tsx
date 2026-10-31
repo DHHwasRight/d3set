@@ -16,7 +16,7 @@ import { useMounted } from "./useMounted";
 
 export interface DashboardProps extends Pick<
   DashboardOptions,
-  "filterMode" | "timeField" | "timeWindow" | "timeWindows" | "showStatus" | "initialFilters"
+  "filterMode" | "timeField" | "timeWindow" | "timeWindows" | "now" | "showStatus" | "initialFilters"
 > {
   charts: ChartSpec[];
   filters?: FilterDef[];

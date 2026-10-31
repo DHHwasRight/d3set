@@ -36,6 +36,8 @@ fn dashboard(name: &str) -> Option<(&'static str, &'static str, Feed, Dashboard)
         filters: vec![Filter::multi_select("service"), Filter::select("region"), Filter::select("host"), Filter::search("message")],
         time_field: Some("at".into()),
         time_window: Some("15m".into()),
+        // Recorded rows (a fixed clock): the window counts from their time, not the browser's.
+        now: *crate::data::FROZEN,
         theme: &crate::theme::GALLERY,
         width: DASHBOARD,
         ..Default::default()
@@ -57,6 +59,8 @@ fn dashboard(name: &str) -> Option<(&'static str, &'static str, Feed, Dashboard)
         ],
         filters: vec![Filter::multi_select("region"), Filter::select("product"), Filter::range("amount"), Filter::search("customer")],
         time_field: Some("at".into()),
+        // Recorded rows (a fixed clock): the window counts from their time, not the browser's.
+        now: *crate::data::FROZEN,
         theme: &crate::theme::GALLERY,
         width: DASHBOARD,
         ..Default::default()

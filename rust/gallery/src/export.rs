@@ -63,6 +63,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
         .enable_all()
         .build()
         .map_err(|e| e.to_string())?;
+    // The feeds' history, as `serve` fills it: every page embeds its rows from it, and the
+    // timelines continue it. Without it every chart is empty.
+    runtime.block_on(async { crate::data::start() });
     let report = runtime
         .block_on(site.run(|request| {
             // Every static page runs with JavaScript: `?js=off` needs a server to read the query.

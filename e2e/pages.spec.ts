@@ -18,6 +18,23 @@ function requests(page: Page, part: string): string[] {
   return seen;
 }
 
+test("every Rust chart embeds its rows, and the timeline continues them", async ({ request }) => {
+  const html = await (await request.get("/d3set/charts/timeseries/")).text();
+  const payloads = [...html.matchAll(/class="d3s-payload">(.*?)<\/script>/gs)].map(
+    (m) => JSON.parse(m[1]) as { rows: { id: number; at: string }[]; stream?: { url: string } },
+  );
+  expect(payloads.length).toBeGreaterThan(0);
+  for (const p of payloads) expect(p.rows.length).toBeGreaterThan(100);
+  const ops = payloads.find((p) => p.stream?.url.endsWith("/data/ops.json"))!;
+  const timeline = (await (await request.get("/d3set/data/ops.json")).json()) as {
+    frames: { id: number; at: string }[][];
+  };
+  const first = timeline.frames.find((f) => f.length > 0)![0];
+  // The first frame comes right after the newest embedded row: no gap on the time axis.
+  expect(first.id).toBe(Math.max(...ops.rows.map((r) => r.id)) + 1);
+  expect(Date.parse(first.at)).toBeGreaterThanOrEqual(Math.max(...ops.rows.map((r) => Date.parse(r.at))));
+});
+
 test("the Rust gallery navigates with partials from the partial directory", async ({ page }) => {
   const partials = requests(page, "/partials/");
   await page.goto("/d3set/charts/bar/");
@@ -40,6 +57,14 @@ for (const { id, prefix } of LIBRARIES) {
     await expect(page.locator("svg").first()).toBeVisible();
     await expect.poll(() => polled.length, { timeout: 15_000 }).toBeGreaterThan(0);
     expect(errors).toEqual([]);
+  });
+
+  test(`${id}: the dashboard counts its recorded rows in the time window`, async ({ page }) => {
+    await page.goto(`${prefix}/dashboards/ops/`);
+    const requests = page.locator(".d3s-card", { hasText: "Requests" }).first().locator(".d3s-kpi-value");
+    // After hydration too: the window counts from when the rows were drawn, not from today.
+    await page.waitForTimeout(2500);
+    await expect.poll(async () => Number((await requests.textContent())!.replace(/\D/g, ""))).toBeGreaterThan(0);
   });
 
   test(`${id}: the library switch marks it and keeps the page`, async ({ page }) => {

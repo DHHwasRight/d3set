@@ -116,9 +116,9 @@ function resolve(url: string): string {
 /**
  * A source that fetches a JSON file, for hosts that only serve files (GitHub Pages, a bucket).
  *
- * A timeline file plays one frame per interval. The frame comes from the clock
- * (`floor(now / interval) % frames.length`), so every viewer sees the same state. At the end of
- * each loop the file is fetched again with `If-None-Match`: a new deploy brings new frames.
+ * A timeline file plays one frame per interval, from its first frame: the frames continue the rows
+ * the page was drawn with. At the end of each loop the file is fetched again with
+ * `If-None-Match` (a new deploy brings new frames), and `shift` makes the next pass new rows.
  * Any other file is one message, fetched again every interval.
  */
 export function pollSource(opts: PollSourceOptions): DataSource {
@@ -134,9 +134,9 @@ export function pollSource(opts: PollSourceOptions): DataSource {
   let frames: unknown[] | undefined;
   let shift: TimelineShift | undefined;
   let span = 0;
-  let cycle = -1;
-  /** The loop the source started in: pass `j` is `loop() - firstLoop`. */
-  let firstLoop: number | undefined;
+  /** The next frame to play, and how many times the timeline wrapped since the source started. */
+  let next = 0;
+  let pass = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
 
@@ -163,30 +163,28 @@ export function pollSource(opts: PollSourceOptions): DataSource {
 
   const schedule = () => {
     if (closed) return;
-    // A timeline ticks on the clock's interval boundaries, so every viewer changes frame together.
-    const delay = frames ? interval - (Date.now() % interval) : interval;
-    timer = setTimeout(tick, delay);
+    timer = setTimeout(tick, interval);
   };
-
-  /** Which loop of the timeline the clock is in. A new loop fetches the file again. */
-  const loop = () => (frames && frames.length > 0 ? Math.floor(Math.floor(Date.now() / interval) / frames.length) : -1);
 
   const playFrame = () => {
     if (!frames || frames.length === 0) return;
-    const frame = frames[Math.floor(Date.now() / interval) % frames.length];
-    if (!shift) return apply(frame);
-    const now = loop();
-    firstLoop ??= now;
-    apply(shifted(frame, shift, now - firstLoop, interval * frames.length, span));
+    const frame = frames[next];
+    apply(shift ? shifted(frame, shift, pass, interval * frames.length, span) : frame);
+    next += 1;
+    if (next >= frames.length) {
+      next = 0;
+      pass += 1;
+    }
   };
 
   const tick = async () => {
     timer = undefined;
     if (closed) return;
     try {
-      if (!frames || frames.length === 0 || loop() !== cycle) {
+      // The file at the start of each loop: the first tick, and after the last frame.
+      if (!frames || frames.length === 0 || next === 0) {
         await load();
-        cycle = loop();
+        if (frames && next >= frames.length) next = 0;
       }
       if (closed) return;
       playFrame();

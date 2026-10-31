@@ -46,4 +46,23 @@ describe("createDashboard", () => {
     expect(el.querySelector('[data-window="15m"]')!.getAttribute("aria-pressed")).toBe("true");
     dash.destroy();
   });
+
+  it("counts the time window from `now` when the rows were drawn at another time", () => {
+    const el = document.createElement("div");
+    // Recorded a month ago: without `now`, a 15m window would hide every row.
+    const drawn = Date.now() - 30 * 24 * 60 * 60_000;
+    const src = staticSource([
+      { at: new Date(drawn - 60 * 60_000).toISOString(), amount: 100 },
+      { at: new Date(drawn - 60_000).toISOString(), amount: 7 },
+    ]);
+    const dash = createDashboard(el, {
+      source: src,
+      timeField: "at",
+      timeWindow: "15m",
+      now: drawn,
+      charts: [{ type: "kpi", title: "Total", y: "amount" }],
+    });
+    expect(el.querySelector(".d3s-kpi")!.textContent).toBe("7");
+    dash.destroy();
+  });
 });

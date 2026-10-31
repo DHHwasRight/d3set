@@ -210,8 +210,8 @@ pollSource({ url: "data/sales.json", mode: "upsert", key: "id", maxRows: 500 });
 
 - The source applies one frame per `interval`, so the charts animate like with SSE. The file's
   `interval` wins over the option (default 2000 ms).
-- The clock picks the frame (`floor(now / interval) % frames.length`), so every viewer sees the
-  same state.
+- Playback starts on the first frame when the page opens: the frames continue the rows the page
+  was drawn with, so the time axis has no gap.
 - At the end of each loop the source fetches the file again with `If-None-Match`. A 304 keeps the
   frames. A new deploy of the file brings new frames.
 - `shift` makes each loop new data. Without it, the second loop sends the same rows again, and an

@@ -197,6 +197,10 @@ pub struct Dashboard {
     pub filters: Vec<Filter>,
     pub time_field: Option<String>,
     pub time_window: Option<String>,
+    /// When the rows were drawn, in ms since the epoch. The browser's time window counts from it
+    /// and moves on with the clock. Without it, the window counts from the browser's clock: set
+    /// it when the rows are recorded rather than live.
+    pub now: Option<f64>,
     /// Live data. Without it, the page hydrates with the embedded rows only.
     pub stream: Option<Stream>,
     pub filter_mode: Option<&'static str>,
@@ -212,6 +216,7 @@ impl Default for Dashboard {
             filters: vec![],
             time_field: None,
             time_window: None,
+            now: None,
             stream: None,
             filter_mode: None,
             theme: &LIGHT,

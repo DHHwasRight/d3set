@@ -49,6 +49,8 @@ export interface DashboardPayload extends Payload {
   filterMode?: "client" | "server";
   timeField?: string;
   timeWindow?: string;
+  /** When the rows were drawn (ms since the epoch): the time window counts from it. */
+  now?: number;
 }
 
 export interface ChartPayload extends Payload {
@@ -140,6 +142,7 @@ export function hydrate(root: ParentNode = document, opts: HydrateOptions = {}):
         filterMode: p.filterMode,
         timeField: p.timeField,
         timeWindow: p.timeWindow,
+        now: p.now,
         theme: themeOf(p, opts),
         hydrate: true,
       }),
