@@ -24,10 +24,12 @@
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js"
     },
-    "./style.css": "./dist/d3set.css"
+    "./style.css": "./dist/d3set.css",
+    "./src/*": "./src/*"
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "sideEffects": [
     "*.css",
