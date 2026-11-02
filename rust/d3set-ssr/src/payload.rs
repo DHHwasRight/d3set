@@ -3,7 +3,7 @@
 //! Field names are the TypeScript ones (`innerRadius`, `decreaseIsGood`), so the browser
 //! reads the payload with no mapping.
 
-use crate::dashboard::{Dashboard, Filter, Stream};
+use crate::dashboard::{Classes, Dashboard, Filter, Stream};
 use crate::spec::{Column, Spec, Threshold};
 use crate::theme::{Colors, Theme};
 use crate::value::{Row, Value};
@@ -163,6 +163,15 @@ jt::template! {
 }
 
 jt::template! {
+    pub fn ClassesJson(c: &Classes) -> Json {
+        "button"?: c.button.as_deref(),
+        "input"?: c.input.as_deref(),
+        "select"?: c.select.as_deref(),
+        "card"?: c.card.as_deref(),
+    }
+}
+
+jt::template! {
     pub fn DashboardJson(d: &Dashboard, rows: &[Row]) -> Json {
         "theme": ThemeJson(d.theme),
         "charts": [ for s in &d.charts { SpecJson(s) } ],
@@ -171,6 +180,7 @@ jt::template! {
         "timeField"?: d.time_field.as_deref(),
         "timeWindow"?: d.time_window.as_deref(),
         "now"?: d.now,
+        if !d.classes.is_empty() { "classes": ClassesJson(&d.classes) }
         if let Some(s) = &d.stream { "stream": StreamJson(s) }
         "rows": RowsJson(rows),
     }

@@ -2,6 +2,7 @@
 // the chart registry. Nothing here registers a chart, so a bundler ships only the chart types an
 // app imports and registers (or loads with `./lazy`). `index.ts` is this plus every built-in type.
 export { createDashboard, cardChartWidth, type Dashboard, type DashboardOptions } from "./dashboard";
+export type { ControlClasses } from "./classes";
 export { createChart, type ChartOptions, type MountedChart } from "./chart";
 export {
   hydrate,

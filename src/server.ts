@@ -14,6 +14,7 @@ import { registerBuiltInCharts } from "./charts/index";
 import { createChart } from "./chart";
 import type { ChartSpec } from "./charts/types";
 import { createDashboard } from "./dashboard";
+import type { ControlClasses } from "./classes";
 import { staticSource } from "./data/static";
 import type { Row } from "./data/types";
 import type { FilterDef } from "./filters/filters";
@@ -51,6 +52,8 @@ export interface RenderDashboardOptions {
   timeWindow?: string;
   /** When the rows were drawn (ms since the epoch): the time window counts from it. */
   now?: number;
+  /** Extra class names for the controls and cards (see `ControlClasses`). */
+  classes?: ControlClasses;
   /** Write the payload `hydrate()` reads. `false`: static markup, no client code needed. */
   payload?: boolean;
 }
@@ -149,6 +152,7 @@ export function renderDashboard(opts: RenderDashboardOptions): string {
       timeField: opts.timeField,
       timeWindow: opts.timeWindow,
       now: opts.now,
+      classes: opts.classes,
       theme: { ...theme, motion: 0 },
       width: opts.width ?? 960,
     });
@@ -160,6 +164,7 @@ export function renderDashboard(opts: RenderDashboardOptions): string {
       timeField: opts.timeField,
       timeWindow: opts.timeWindow,
       now: opts.now,
+      classes: opts.classes,
       rows,
       theme,
       stream: opts.stream,

@@ -1,5 +1,6 @@
 import { distinctValues, type FilterDef, type FilterStore } from "./filters";
 import type { Row } from "../data/types";
+import { addClasses, type ControlClasses } from "../classes";
 
 /** `new Option(text, value, false, selected)`, built from `document` so any DOM can run it. */
 function option(text: string, value: string, selected: boolean): HTMLOptionElement {
@@ -19,6 +20,7 @@ export function renderFilterBar(
   defs: FilterDef[],
   store: FilterStore,
   rows: () => Row[] = () => [],
+  classes: ControlClasses = {},
 ): { refresh(): void; destroy(): void } {
   el.classList.add("d3s-filters");
   const refreshers: Array<() => void> = [];
@@ -36,6 +38,7 @@ export function renderFilterBar(
     switch (def.type) {
       case "select": {
         const sel = document.createElement("select");
+        addClasses(sel, classes.select);
         sel.multiple = def.multiple;
         sel.addEventListener("change", () => {
           const picked = [...sel.selectedOptions].map((o) => o.value).filter((v) => v !== "");
@@ -66,6 +69,7 @@ export function renderFilterBar(
       case "search": {
         const input = document.createElement("input");
         input.type = "search";
+        addClasses(input, classes.input);
         input.placeholder = "Search…";
         input.addEventListener("input", () => store.set(def.id, input.value || undefined));
         syncers.push(() => {
@@ -85,6 +89,7 @@ export function renderFilterBar(
           [b, isDate ? "To" : "Max"],
         ] as const) {
           input.type = isDate ? "date" : "number";
+          addClasses(input, classes.input);
           input.placeholder = ph;
           input.setAttribute("aria-label", `${def.label} ${ph.toLowerCase()}`);
           if (def.type === "range") {
@@ -127,6 +132,7 @@ export function renderFilterBar(
   const reset = document.createElement("button");
   reset.type = "button";
   reset.className = "d3s-filter-reset";
+  addClasses(reset, classes.button);
   reset.textContent = "Reset";
   reset.addEventListener("click", () => store.reset((id) => !defs.some((d) => d.id === id)));
   el.append(reset);

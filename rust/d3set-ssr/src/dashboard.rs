@@ -192,6 +192,24 @@ impl Stream {
 }
 
 /// A dashboard: charts that share one data source, filters, and a time window.
+/// Extra class names for the controls a dashboard draws, so they take a design system's look
+/// (TS `ControlClasses`). Each is added after the element's own `d3s-*` class. `button`: Reset,
+/// Pause and Clear all. `input`: the search, number and date inputs. `select`: the select
+/// filters. `card`: each card.
+#[derive(Clone, Debug, Default)]
+pub struct Classes {
+    pub button: Option<String>,
+    pub input: Option<String>,
+    pub select: Option<String>,
+    pub card: Option<String>,
+}
+
+impl Classes {
+    pub fn is_empty(&self) -> bool {
+        self.button.is_none() && self.input.is_none() && self.select.is_none() && self.card.is_none()
+    }
+}
+
 pub struct Dashboard {
     pub charts: Vec<Spec>,
     pub filters: Vec<Filter>,
@@ -204,6 +222,8 @@ pub struct Dashboard {
     /// Live data. Without it, the page hydrates with the embedded rows only.
     pub stream: Option<Stream>,
     pub filter_mode: Option<&'static str>,
+    /// Extra class names for the controls and cards.
+    pub classes: Classes,
     pub theme: &'static Theme,
     /// Width of the dashboard in CSS pixels, to size the cards like the CSS grid will.
     pub width: f64,
@@ -219,6 +239,7 @@ impl Default for Dashboard {
             now: None,
             stream: None,
             filter_mode: None,
+            classes: Classes::default(),
             theme: &LIGHT,
             width: 960.0,
         }
@@ -319,4 +340,37 @@ pub fn static_figure(
             payload: "",
         },
     )?)
+}
+
+#[cfg(test)]
+mod classes_tests {
+    use super::*;
+
+    #[test]
+    fn classes_reach_the_controls_the_cards_and_the_payload() {
+        let d = Dashboard {
+            charts: vec![Spec::new("kpi").y("amount").title("Revenue")],
+            filters: vec![Filter::select("region")],
+            classes: Classes {
+                button: Some("btn x".into()),
+                input: None,
+                select: Some("sel".into()),
+                card: Some("card".into()),
+            },
+            ..Default::default()
+        };
+        let html = d.render(&[]).unwrap();
+        assert!(html.contains(r#"class="d3s-filter-reset btn x""#), "{html}");
+        assert!(html.contains(r#"class="sel""#), "{html}");
+        assert!(html.contains(r#"class="d3s-card card""#), "{html}");
+        assert!(html.contains(r#""classes":{"button":"btn x","select":"sel","card":"card"}"#), "{html}");
+    }
+
+    #[test]
+    fn no_classes_leaves_the_markup_and_payload_as_they_were() {
+        let d = Dashboard { filters: vec![Filter::select("region")], ..Default::default() };
+        let html = d.render(&[]).unwrap();
+        assert!(html.contains(r#"class="d3s-filter-reset">"#));
+        assert!(!html.contains("\"classes\""));
+    }
 }

@@ -1,6 +1,7 @@
 import { createChart } from "./chart";
 import type { Chart, ChartSpec } from "./charts/types";
 import { createDashboard, type Dashboard } from "./dashboard";
+import type { ControlClasses } from "./classes";
 import { pollSource } from "./data/poll";
 import { sseSource } from "./data/sse";
 import { staticSource } from "./data/static";
@@ -51,6 +52,8 @@ export interface DashboardPayload extends Payload {
   timeWindow?: string;
   /** When the rows were drawn (ms since the epoch): the time window counts from it. */
   now?: number;
+  /** Extra class names for the controls and cards. */
+  classes?: ControlClasses;
 }
 
 export interface ChartPayload extends Payload {
@@ -143,6 +146,7 @@ export function hydrate(root: ParentNode = document, opts: HydrateOptions = {}):
         timeField: p.timeField,
         timeWindow: p.timeWindow,
         now: p.now,
+        classes: p.classes,
         theme: themeOf(p, opts),
         hydrate: true,
       }),

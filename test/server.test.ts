@@ -76,4 +76,18 @@ describe("server rendering of HTML charts", () => {
     expect(html).toContain("<thead>");
     expect(html.match(/<tr>/g)?.length).toBe(4);
   });
+  it("adds the classes option to the controls and cards, and carries it in the payload", () => {
+    const classes = { button: "btn x", input: "in", select: "sel", card: "card" };
+    const html = renderDashboard({
+      charts: [{ type: "kpi", title: "Revenue", y: "amount" }],
+      filters: [{ type: "select", id: "region", field: "region", label: "Region", param: "region", multiple: false }],
+      rows,
+      width: 960,
+      classes,
+    });
+    expect(html).toContain('class="d3s-filter-reset btn x"');
+    expect(html).toContain('<select class="sel"');
+    expect(html).toMatch(/<section class="d3s-card card"/);
+    expect(html).toContain('"classes":{"button":"btn x","input":"in","select":"sel","card":"card"}');
+  });
 });

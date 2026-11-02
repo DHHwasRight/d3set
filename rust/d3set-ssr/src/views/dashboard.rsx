@@ -2,7 +2,7 @@
 // so the page looks the same before and after hydration.
 
 use crate::chart::Rendered;
-use crate::dashboard::{Card, Dashboard, Filter};
+use crate::dashboard::{Card, Classes, Dashboard, Filter};
 use crate::theme::Theme;
 use crate::value::Row;
 use crate::views::frame::ChartElement;
@@ -14,9 +14,9 @@ pub fn DashboardView(dashboard: &Dashboard, rows: &[Row], cards: &[Card], payloa
                 if !dashboard.filters.is_empty() {
                     <div class="d3s-filters">
                         for f in &dashboard.filters {
-                            <FilterControl filter={f} rows={rows} />
+                            <FilterControl filter={f} rows={rows} classes={&dashboard.classes} />
                         }
-                        <button type="button" class="d3s-filter-reset">Reset</button>
+                        <button type="button" class={with_class("d3s-filter-reset", &dashboard.classes.button)}>Reset</button>
                     </div>
                 }
             </div>
@@ -27,7 +27,7 @@ pub fn DashboardView(dashboard: &Dashboard, rows: &[Row], cards: &[Card], payloa
                             <button type="button" data-window={w} aria-pressed={pressed(dashboard, w)}>{window_label(w)}</button>
                         }
                     </div>
-                    <button type="button" class="d3s-pause">Pause</button>
+                    <button type="button" class={with_class("d3s-pause", &dashboard.classes.button)}>Pause</button>
                 }
                 <span class="d3s-status" data-state="idle">{status(dashboard)}</span>
             </div>
@@ -35,7 +35,7 @@ pub fn DashboardView(dashboard: &Dashboard, rows: &[Row], cards: &[Card], payloa
         <div class="d3s-chips" hidden></div>
         <div class="d3s-grid">
             for card in cards {
-                <section class="d3s-card" { ...[("data-span", span(card))] }>
+                <section class={with_class("d3s-card", &dashboard.classes.card)} { ...[("data-span", span(card))] }>
                     if card.title.is_some() {
                         <h3>{title(card)}</h3>
                     }
@@ -56,11 +56,11 @@ pub fn Figure(theme: &Theme, chart: &Rendered, payload: &str) -> Element {
     </figure>
 }
 
-fn FilterControl(filter: &Filter, rows: &[Row]) -> Element {
+fn FilterControl(filter: &Filter, rows: &[Row], classes: &Classes) -> Element {
     <label class="d3s-filter" data-filter={filter.id()}>
         <span>{filter.label()}</span>
         match filter {
-            Filter::Select { multiple, .. } => <select multiple?={*multiple}>
+            Filter::Select { multiple, .. } => <select multiple?={*multiple} { ...[("class", classes.select.clone())] }>
                 if !*multiple {
                     <option value="">All</option>
                 }
@@ -68,17 +68,25 @@ fn FilterControl(filter: &Filter, rows: &[Row]) -> Element {
                     <option value={&o}>{o}</option>
                 }
             </select>,
-            Filter::Search { .. } => <input type="search" placeholder="Search…">,
+            Filter::Search { .. } => <input type="search" placeholder="Search…" { ...[("class", classes.input.clone())] }>,
             Filter::Range { .. } => <div style="display: flex; gap: 4px;">
-                <input type="number" placeholder="Min" style="width: 6em;">
-                <input type="number" placeholder="Max" style="width: 6em;">
+                <input type="number" placeholder="Min" style="width: 6em;" { ...[("class", classes.input.clone())] }>
+                <input type="number" placeholder="Max" style="width: 6em;" { ...[("class", classes.input.clone())] }>
             </div>,
             Filter::DateRange { .. } => <div style="display: flex; gap: 4px;">
-                <input type="date" placeholder="From">
-                <input type="date" placeholder="To">
+                <input type="date" placeholder="From" { ...[("class", classes.input.clone())] }>
+                <input type="date" placeholder="To" { ...[("class", classes.input.clone())] }>
             </div>,
         }
     </label>
+}
+
+/// `base`, then the extra class names when there are some.
+fn with_class(base: &str, extra: &Option<String>) -> String {
+    match extra.as_deref().map(str::trim) {
+        Some(e) if !e.is_empty() => format!("{base} {e}"),
+        _ => base.to_string(),
+    }
 }
 
 fn pressed(d: &Dashboard, w: &str) -> &'static str {

@@ -5,6 +5,7 @@ import type { Chart, ChartSpec } from "./charts/types";
 import { asDate, parseInterval } from "./charts/util";
 import type { DataSource, Row } from "./data/types";
 import { renderFilterBar } from "./filters/bar";
+import { addClasses, type ControlClasses } from "./classes";
 import {
   applyFilters,
   dateRange,
@@ -43,6 +44,8 @@ export interface DashboardOptions {
    * with the clock, so recorded rows (a static site) stay in the window. Default: the clock.
    */
   now?: number;
+  /** Extra class names for the controls and cards (see `ControlClasses`). */
+  classes?: ControlClasses;
   /**
    * Replace server-rendered markup in `root` (see `hydrate`). The first draw has no transition,
    * so the swap from server markup to live charts does not animate.
@@ -153,7 +156,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
   header.append(filterEl, controls);
   const chips = el("div", "d3s-chips");
   root.append(header, chips);
-  const bar = declared.length ? renderFilterBar(filterEl, declared, store, () => opts.source.rows()) : undefined;
+  const bar = declared.length ? renderFilterBar(filterEl, declared, store, () => opts.source.rows(), opts.classes) : undefined;
 
   let windowButtons: HTMLButtonElement[] = [];
   let pauseButton: HTMLButtonElement | undefined;
@@ -170,6 +173,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
     });
     picker.append(...windowButtons);
     pauseButton = el("button", "d3s-pause", "Pause");
+    addClasses(pauseButton, opts.classes?.button);
     pauseButton.type = "button";
     pauseButton.addEventListener("click", () => api.setPaused(!paused));
     controls.append(picker, pauseButton);
@@ -268,6 +272,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
   const chartIds = opts.charts.map((_, i) => `chart-${i}`);
   const charts: Chart[] = opts.charts.map((spec, i) => {
     const card = el("section", "d3s-card");
+    addClasses(card, opts.classes?.card);
     if (spec.span && spec.span > 1) card.dataset.span = String(spec.span);
     if (spec.title) card.append(el("h3", "", spec.title));
     const body = el("div");
@@ -297,6 +302,7 @@ export function createDashboard(root: HTMLElement, opts: DashboardOptions): Dash
         ? [
             (() => {
               const b = el("button", "d3s-filter-reset", "Clear all");
+              addClasses(b, opts.classes?.button);
               b.type = "button";
               b.addEventListener("click", () => api.clearFilters());
               return b;
