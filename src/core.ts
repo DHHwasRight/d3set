@@ -27,6 +27,7 @@ export {
 } from "./theme/theme";
 
 export { sseSource, buildUrl, type SseSourceOptions } from "./data/sse";
+export { FetchEventSource, type FetchEventSourceInit } from "./data/fetch-event-source";
 export { pollSource, type PollSourceOptions, type Timeline } from "./data/poll";
 export { staticSource } from "./data/static";
 export { mergeRows, type MergeOptions } from "./data/merge";

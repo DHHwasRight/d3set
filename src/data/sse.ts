@@ -1,5 +1,6 @@
 import { mergeRows, type MergeOptions } from "./merge";
 import { SourceStore } from "./store";
+import { FetchEventSource } from "./fetch-event-source";
 import type { DataSource, Row } from "./types";
 
 export interface SseSourceOptions extends Partial<MergeOptions> {
@@ -10,6 +11,13 @@ export interface SseSourceOptions extends Partial<MergeOptions> {
   /** Initial query parameters. `setParams` replaces them and reconnects. */
   params?: Record<string, string | string[]>;
   withCredentials?: boolean;
+  /**
+   * Request headers, such as `Authorization`. The browser's `EventSource` cannot send any, so with
+   * headers the stream is read with `fetch` (`FetchEventSource`), with the same reconnection.
+   */
+  headers?: Record<string, string>;
+  /** The `fetch` that reads a stream with `headers`. For tests and non-browser hosts. */
+  fetch?: typeof fetch;
   /** Convert a raw event payload into rows or an envelope. Default: `JSON.parse`. */
   parse?: (data: string, event: string) => unknown;
   /** Wait this many ms before a burst of messages is sent to listeners. Default: 0 (next animation frame). */
@@ -34,7 +42,9 @@ export function buildUrl(url: string, params: Record<string, string | string[]> 
  * by itself after network errors.
  */
 export function sseSource(opts: SseSourceOptions): DataSource {
-  const ES = opts.EventSource ?? globalThis.EventSource;
+  const ES: typeof EventSource | undefined = opts.headers
+    ? (fetchEventSource(opts.headers, opts.fetch) as unknown as typeof EventSource)
+    : (opts.EventSource ?? globalThis.EventSource);
   if (!ES) throw new Error("d3set: sseSource: no EventSource implementation is available.");
 
   const store = new SourceStore();
@@ -97,5 +107,14 @@ export function sseSource(opts: SseSourceOptions): DataSource {
       es?.close();
       store.setState("closed");
     },
+  };
+}
+
+/** A `FetchEventSource` class with these headers, constructed like `EventSource`. */
+function fetchEventSource(headers: Record<string, string>, fetchFn?: typeof fetch) {
+  return class extends FetchEventSource {
+    constructor(url: string, init?: { withCredentials?: boolean }) {
+      super(url, { headers, fetch: fetchFn, withCredentials: init?.withCredentials });
+    }
   };
 }
