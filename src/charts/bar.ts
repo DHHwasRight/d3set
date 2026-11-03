@@ -39,6 +39,12 @@ interface BarData {
   bars: Bar[];
 }
 
+/** `options.labelWidth`: the category label column of a horizontal chart, 88 px by default. */
+function labelWidth(spec: ChartSpec): number {
+  const w = spec.options?.labelWidth;
+  return typeof w === "number" && Number.isFinite(w) && w >= 0 ? w : 88;
+}
+
 /** `options.categories: "a|b|c"`: the fixed categories, in order, without repeats. */
 export function fixedCategories(spec: ChartSpec): string[] | undefined {
   const c = spec.options?.categories;
@@ -118,6 +124,8 @@ export function toBars(rows: Row[], spec: ChartSpec, xField: string, yField: str
 /**
  * Bars by category. Series are grouped side by side, or stacked with `stacked: true`.
  * `horizontal: true` puts categories on the y axis. Default aggregate: `sum`.
+ * `options.labelWidth`: with `horizontal`, the width in px of the category labels, left of the plot
+ * (88 by default). Long labels need more: plan or customer names.
  * `options.categories: "a|b|c"` fixes the categories and their order: a category with no rows keeps
  * its band, rows of other categories are left out (also from the legend), and `limit` is ignored.
  * `options.axes: "none"` draws no axes or grid lines and no margin, so the bars fill the frame.
@@ -136,7 +144,7 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
     el,
     spec.height ?? 240,
     () => draw(false),
-    xyMargin(spec, horizontal ? { ...margin, left: 88 } : margin, horizontal),
+    xyMargin(spec, horizontal ? { ...margin, left: labelWidth(spec) } : margin, horizontal),
   );
   const layers = createXYLayers(frame);
   const legend = createLegend(el, () => {

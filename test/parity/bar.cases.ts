@@ -5,6 +5,9 @@ export const cases: Cases = {
   "bar stacked horizontal": {
     spec: { type: "bar", x: "host", y: "amount", series: "region", stacked: true, horizontal: true },
   },
+  "bar horizontal label width": {
+    spec: { type: "bar", x: "host", y: "amount", horizontal: true, options: { labelWidth: 200 } },
+  },
   "bar limit": { spec: { type: "bar", x: "host", y: "latency", limit: 3, format: "$,.0f" } },
   "bar where": {
     spec: { type: "bar", x: "product", y: "amount", series: "region", options: { where: "region=EU" } },

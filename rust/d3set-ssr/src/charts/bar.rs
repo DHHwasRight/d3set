@@ -37,9 +37,10 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let stacked = c.spec.stacked.unwrap_or(false);
     let fmt = c.fmt(".3~s");
     let height = c.height(240);
+    // Horizontal: the category labels sit left of the plot, `options.labelWidth` px (88 default).
     let base = if horizontal {
         Margin {
-            left: 88.0,
+            left: c.spec.option_num("labelWidth").filter(|w| *w >= 0.0).unwrap_or(88.0),
             ..MARGIN
         }
     } else {

@@ -234,6 +234,14 @@ impl Spec {
             .and_then(|(_, v)| v.as_str())
     }
 
+    /// An option as a number: `typeof options.key === "number"`.
+    pub fn option_num(&self, key: &str) -> Option<f64> {
+        self.options.iter().find(|(k, _)| k == key).and_then(|(_, v)| match v {
+            Value::Num(n) if n.is_finite() => Some(*n),
+            _ => None,
+        })
+    }
+
     /// An option as a boolean: `options.sort === true`.
     pub fn flag(&self, key: &str) -> bool {
         self.options
