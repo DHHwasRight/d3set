@@ -10,13 +10,14 @@ import {
   need,
   rangeBrush,
   renderAxes,
+  formatter,
 } from "./util";
 
 /** Distribution of the numeric field `y` in `bins` buckets (default 20). Drag to filter a value range; double-click to clear. */
 export const histogramChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   let values: number[] = [];
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));

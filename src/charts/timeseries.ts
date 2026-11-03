@@ -18,6 +18,8 @@ import {
   animate,
   xyLook,
   xyMargin,
+  axisFormatter,
+  formatter,
 } from "./util";
 
 interface TimeBar {
@@ -34,7 +36,8 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
   const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
+  const axisFmt = axisFormatter(spec, ".3~s");
   const look = xyLook(spec);
   let data: SeriesData = toSeriesData([], spec, xField, yField);
   let x = xScale(data, 1);
@@ -91,7 +94,7 @@ const timeBarsChart: ChartFactory = (el, spec, ctx) => {
     renderAxes(layers, x as never, y as never, {
       w,
       h,
-      fmt,
+      fmt: axisFmt,
       edges: look.edges ? edgesOf(data.xs) : undefined,
       right: look.right,
       none: look.none,

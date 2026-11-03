@@ -93,6 +93,48 @@ export function xyMargin(spec: ChartSpec, base: Margin = margin, valueOnX = fals
   return look.right && !valueOnX ? { ...base, left: 12, right: 56 } : base;
 }
 
+/**
+ * A number formatter: a d3-format specifier, or `short`, d3set's compact notation for axes:
+ * below 1,000 up to 2 decimals (`585`, `12.5`), then 3 significant digits and a unit, `k`, `M`,
+ * `B`, `T` (`370k`, `1.23M`, `4.5B`). B, not d3's SI G: these are amounts more often than bytes.
+ */
+export function formatter(spec: string): (n: number) => string {
+  return spec === "short" ? shortFormat : d3.format(spec);
+}
+
+const SHORT_UNITS: Array<[number, string]> = [
+  [1e12, "T"],
+  [1e9, "B"],
+  [1e6, "M"],
+  [1e3, "k"],
+];
+const sig3 = d3.format(".3~r");
+const small = d3.format(",.2~f");
+
+function shortFormat(n: number): string {
+  if (!Number.isFinite(n)) return String(n);
+  const a = Math.abs(n);
+  for (let i = 0; i < SHORT_UNITS.length; i++) {
+    const [unit, suffix] = SHORT_UNITS[i]!;
+    if (a < unit) continue;
+    const scaled = sig3(n / unit);
+    // 999,999 rounds to 1000k: one unit up instead.
+    if (Math.abs(Number(scaled.replace("\u2212", "-"))) >= 1000 && i > 0) {
+      const [up, upSuffix] = SHORT_UNITS[i - 1]!;
+      return sig3(n / up) + upSuffix;
+    }
+    return scaled + suffix;
+  }
+  // 999.996 rounds to 1,000: show it as 1k.
+  return Math.abs(Number(small(n).replace(/,/g, "").replace("\u2212", "-"))) >= 1000 ? sig3(n / 1e3) + "k" : small(n);
+}
+
+/** The value axis formatter: `options.axisFormat` (for example `short`), else the chart's format. */
+export function axisFormatter(spec: ChartSpec, fallback: string): (n: number) => string {
+  const axis = spec.options?.axisFormat;
+  return formatter(typeof axis === "string" && axis ? axis : (spec.format ?? fallback));
+}
+
 /** The first and last of sorted values, for `ticks: "edges"`. One value gives one tick. */
 export function edgesOf<T>(values: T[]): T[] {
   return values.length > 1 ? [values[0]!, values.at(-1)!] : values.slice();

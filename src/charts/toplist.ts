@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { h, htmlBody } from "./html";
-import { interactionsOf, need, rollup, selectOnClick, valueColor } from "./util";
+import { interactionsOf, need, rollup, selectOnClick, valueColor, formatter } from "./util";
 
 /**
  * Ranked list of `x` values by the aggregate of `y` (default `sum`), largest first.
@@ -12,7 +12,7 @@ export const toplistChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
   const xField = need(spec, "x");
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   const body = htmlBody(el, spec.height ?? 240, "d3s-toplist");
   const ix = interactionsOf(ctx);
   let entries: Array<[string, number]> = [];

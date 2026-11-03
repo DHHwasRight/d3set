@@ -36,6 +36,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let horizontal = c.spec.horizontal.unwrap_or(false);
     let stacked = c.spec.stacked.unwrap_or(false);
     let fmt = c.fmt(".3~s");
+    let axis_fmt = c.axis_fmt(".3~s");
     let height = c.height(240);
     // Horizontal: the category labels sit left of the plot, `options.labelWidth` px (88 default).
     let base = if horizontal {
@@ -203,7 +204,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
             Scale::Band(&band),
             w,
             h,
-            &fmt,
+            &axis_fmt,
             true,
             &look,
         )
@@ -213,7 +214,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
             Scale::Linear(&value),
             w,
             h,
-            &fmt,
+            &axis_fmt,
             false,
             &look,
         )

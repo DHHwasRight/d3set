@@ -18,6 +18,7 @@ import {
   rangeBrush,
   renderAxes,
   stableColors,
+  formatter,
 } from "./util";
 
 interface Dot {
@@ -34,7 +35,7 @@ export const scatterChart: ChartFactory = (el, spec, ctx) => {
   const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   let dots: Dot[] = [];
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));

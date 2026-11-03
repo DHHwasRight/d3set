@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { toSeriesData } from "./xy";
-import { aggregate, need, valueColor } from "./util";
+import { aggregate, need, valueColor, formatter } from "./util";
 
 /**
  * A big number: the aggregate of `y` over all rows (default `sum`).
@@ -33,7 +33,7 @@ export const kpiChart: ChartFactory = (el, spec, ctx) => {
   const delta = document.createElement("div");
   delta.className = "d3s-kpi-delta";
   el.append(value, delta);
-  const fmt = d3.format(spec.format ?? ",.0f");
+  const fmt = formatter(spec.format ?? ",.0f");
 
   let svg: d3.Selection<SVGSVGElement, unknown, null, undefined> | undefined;
   if (spec.x)

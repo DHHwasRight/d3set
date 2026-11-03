@@ -17,6 +17,8 @@ import {
   tweenPath,
   xyLook,
   xyMargin,
+  axisFormatter,
+  formatter,
 } from "./util";
 
 interface Band {
@@ -36,7 +38,8 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const stacked = spec.stacked ?? true;
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
+  const axisFmt = axisFormatter(spec, ".3~s");
   const look = xyLook(spec);
   const curve = spec.options?.curve === "linear" ? d3.curveLinear : d3.curveMonotoneX;
   const gradient = spec.options?.gradient === true;
@@ -91,7 +94,7 @@ export const areaChart: ChartFactory = (el, spec, ctx) => {
     renderAxes(layers, x as never, y as never, {
       w,
       h,
-      fmt,
+      fmt: axisFmt,
       edges: look.edges ? edgesOf(data.xs) : undefined,
       right: look.right,
       none: look.none,

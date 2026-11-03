@@ -17,6 +17,7 @@ import {
   textOn,
   topN,
   tweenTranslate,
+  formatter,
 } from "./util";
 
 interface Node {
@@ -35,7 +36,7 @@ export const treemapChart: ChartFactory = (el, spec, ctx) => {
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const how = spec.aggregate ?? "sum";
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   let root: Node = { name: "root", children: [] };
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false), { top: 0, right: 0, bottom: 0, left: 0 });

@@ -15,6 +15,7 @@ import {
   need,
   renderAxes,
   sequentialColor,
+  formatter,
 } from "./util";
 
 interface Cell {
@@ -29,7 +30,7 @@ export const heatmapChart: ChartFactory = (el, spec, ctx) => {
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const rowField = need(spec, "series");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   let cells: Cell[] = [];
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false), { ...margin, left: 72 });

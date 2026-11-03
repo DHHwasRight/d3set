@@ -15,6 +15,7 @@ import {
   renderAxes,
   stableColors,
   tweenTranslate,
+  formatter,
 } from "./util";
 
 interface Box {
@@ -35,7 +36,7 @@ export const boxplotChart: ChartFactory = (el, spec, ctx) => {
   const colors = stableColors();
   const xField = need(spec, "x");
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   let boxes: Box[] = [];
 
   const frame = createFrame(el, spec.height ?? 240, () => draw(false));

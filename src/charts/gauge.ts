@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
-import { aggregate, createFrame, motionMs, need, seqColor, thresholdColor, valueColor } from "./util";
+import { aggregate, createFrame, motionMs, need, seqColor, thresholdColor, valueColor, formatter } from "./util";
 
 /** A half-circle gauge of the aggregate of `y` (default `sum`) between `min` (default 0) and `max` (default 100).
  * `thresholds` color the arc and add ticks at their values. */
@@ -9,7 +9,7 @@ export const gaugeChart: ChartFactory = (el, spec, ctx) => {
   const yField = need(spec, "y");
   const min = spec.min ?? 0;
   const max = spec.max ?? 100;
-  const fmt = d3.format(spec.format ?? ",.0f");
+  const fmt = formatter(spec.format ?? ",.0f");
   let value = min;
   let shown = min;
 

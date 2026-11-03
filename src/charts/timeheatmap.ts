@@ -15,6 +15,7 @@ import {
   rangeBrush,
   renderAxes,
   sequentialColor,
+  formatter,
 } from "./util";
 
 interface Cell {
@@ -33,7 +34,7 @@ export const timeheatmapChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
   const xField = need(spec, "x");
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   let cells: Cell[] = [];
   let step = 60_000;
   let yDomain: [number, number] = [0, 1];

@@ -73,6 +73,14 @@ impl Ctx<'_> {
         Format::new(self.spec.format.as_deref().unwrap_or(default))
     }
 
+    /// The value axis format: `options.axisFormat` (for example `short`), else the chart's.
+    pub fn axis_fmt(&self, default: &str) -> Format {
+        match self.spec.option_str("axisFormat").filter(|s| !s.is_empty()) {
+            Some(f) => Format::new(f),
+            None => self.fmt(default),
+        }
+    }
+
     pub fn aggregate(&self, default: Agg) -> Agg {
         self.spec.aggregate.unwrap_or(default)
     }

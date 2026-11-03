@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import type { Row } from "../data/types";
 import type { ChartFactory, Level } from "./types";
 import { h, htmlBody, timeFormat } from "./html";
-import { asDate, interactionsOf, levelColor, matchThreshold, need, selectOnClick } from "./util";
+import { asDate, interactionsOf, levelColor, matchThreshold, need, selectOnClick, formatter } from "./util";
 
 const levels: Level[] = ["ok", "warning", "critical"];
 
@@ -15,7 +15,7 @@ export const statusChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
   const xField = need(spec, "x");
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   const body = htmlBody(el, spec.height ?? 160, "d3s-status-grid");
   const ix = interactionsOf(ctx);
   let latest: Array<{ name: string; level: Level; value: unknown; seen?: Date }> = [];

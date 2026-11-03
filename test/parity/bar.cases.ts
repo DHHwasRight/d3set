@@ -8,6 +8,9 @@ export const cases: Cases = {
   "bar horizontal label width": {
     spec: { type: "bar", x: "host", y: "amount", horizontal: true, options: { labelWidth: 200 } },
   },
+  "bar short axis": {
+    spec: { type: "bar", x: "host", y: "amount", format: ",.2f", options: { axisFormat: "short", valueAxis: "right" } },
+  },
   "bar limit": { spec: { type: "bar", x: "host", y: "latency", limit: 3, format: "$,.0f" } },
   "bar where": {
     spec: { type: "bar", x: "product", y: "amount", series: "region", options: { where: "region=EU" } },

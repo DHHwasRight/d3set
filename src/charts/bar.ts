@@ -22,6 +22,8 @@ import {
   topN,
   xyLook,
   xyMargin,
+  axisFormatter,
+  formatter,
 } from "./util";
 
 interface Bar {
@@ -136,7 +138,8 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const horizontal = spec.horizontal ?? false;
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
+  const axisFmt = axisFormatter(spec, ".3~s");
   const look = xyLook(spec);
   let data = toBars([], spec, xField, yField);
 
@@ -189,8 +192,9 @@ export const barChart: ChartFactory = (el, spec, ctx) => {
 
     const edges = look.edges ? edgesOf(categories) : undefined;
     const none = look.none;
-    if (horizontal) renderAxes(layers, value as never, band as never, { w, h, fmt, valueAxis: "x", edges, none });
-    else renderAxes(layers, band as never, value as never, { w, h, fmt, edges, right: look.right, none });
+    if (horizontal)
+      renderAxes(layers, value as never, band as never, { w, h, fmt: axisFmt, valueAxis: "x", edges, none });
+    else renderAxes(layers, band as never, value as never, { w, h, fmt: axisFmt, edges, right: look.right, none });
 
     const offset = (b: Bar) => (band(b.category) ?? 0) + (sub(spec.stacked ? "all" : b.series) ?? 0);
     const zero = value(0);

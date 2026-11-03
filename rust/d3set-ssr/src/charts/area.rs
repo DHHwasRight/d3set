@@ -18,6 +18,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let stacked = c.spec.stacked.unwrap_or(true);
     let gradient = c.spec.flag("gradient");
     let fmt = c.fmt(".3~s");
+    let axis_fmt = c.axis_fmt(".3~s");
     let height = c.height(240);
     let margin = margin_of(c.spec, MARGIN, false);
     let (w, h) = c.inner(height, margin);
@@ -60,7 +61,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         crate::axis::Scale::Linear(&y),
         w,
         h,
-        &fmt,
+        &axis_fmt,
         false,
         &look,
     );

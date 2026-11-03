@@ -13,6 +13,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
     let x_field = c.need("x")?;
     let y_field = c.need("y")?;
     let fmt = c.fmt(".3~s");
+    let axis_fmt = c.axis_fmt(".3~s");
     let height = c.height(240);
     let margin = margin_of(c.spec, MARGIN, false);
     let (w, h) = c.inner(height, margin);
@@ -37,7 +38,7 @@ pub fn render(c: &Ctx) -> Result<Rendered, Error> {
         crate::axis::Scale::Linear(&y),
         w,
         h,
-        &fmt,
+        &axis_fmt,
         false,
         &look,
     );

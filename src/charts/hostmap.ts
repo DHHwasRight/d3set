@@ -1,7 +1,7 @@
 import * as d3 from "d3";
 import type { ChartFactory } from "./types";
 import { h, htmlBody } from "./html";
-import { aggregate, interactionsOf, need, selectOnClick, sequentialColor, textOn, valueColor } from "./util";
+import { aggregate, interactionsOf, need, selectOnClick, sequentialColor, textOn, valueColor, formatter } from "./util";
 
 /**
  * Datadog-style host map: one hexagon per `x` value (for example a host), colored by the aggregate of `y`
@@ -11,7 +11,7 @@ export const hostmapChart: ChartFactory = (el, spec, ctx) => {
   let theme = ctx.theme;
   const xField = need(spec, "x");
   const yField = need(spec, "y");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   const body = htmlBody(el, spec.height ?? 240, "d3s-hostmap");
   const ix = interactionsOf(ctx);
   let groups: Array<[string, Array<[string, number]>]> = [];

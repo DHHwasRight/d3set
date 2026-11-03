@@ -12,6 +12,7 @@ import {
   motionMs,
   need,
   stableColors,
+  formatter,
 } from "./util";
 
 interface Node {
@@ -32,7 +33,7 @@ export const sunburstChart: ChartFactory = (el, spec, ctx) => {
   const xField = need(spec, "x");
   const yField = need(spec, "y");
   const groupField = need(spec, "series");
-  const fmt = d3.format(spec.format ?? ".3~s");
+  const fmt = formatter(spec.format ?? ".3~s");
   const pct = d3.format(".1%");
   let root: Node = { name: "root", children: [] };
   // Angles drawn last time, per arc key, so live updates tween angles (not path strings).

@@ -17,6 +17,8 @@ pub struct Format {
     precision: Option<usize>,
     trim: bool,
     kind: char,
+    /// `short`: d3set's compact notation (`370k`, `1.23M`), not a d3-format specifier.
+    short: bool,
 }
 
 impl Format {
@@ -31,7 +33,11 @@ impl Format {
             precision: None,
             trim: false,
             kind: ' ',
+            short: spec == "short",
         };
+        if f.short {
+            return f;
+        }
         if let Some(&c) = chars.peek() {
             if matches!(c, '-' | '+' | '(' | ' ') {
                 f.sign = c;
@@ -93,6 +99,9 @@ impl Format {
         if x.is_nan() {
             return "NaN".into();
         }
+        if self.short {
+            return short(x);
+        }
         let p = self.precision.unwrap_or(6);
         let negative = x < 0.0 || (x == 0.0 && x.is_sign_negative());
         let a = x.abs();
@@ -127,6 +136,36 @@ impl Format {
 }
 
 /// `d3.format(spec)(x)` in one call.
+/// d3set's compact notation, as `formatter("short")` in TypeScript: below 1,000 up to 2 decimals,
+/// then 3 significant digits and `k`, `M`, `B` or `T`; a value that rounds to 1,000 of a unit
+/// takes the next one.
+fn short(x: f64) -> String {
+    const UNITS: [(f64, &str); 4] = [(1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "k")];
+    let sig3 = Format::new(".3~r");
+    let small = Format::new(",.2~f");
+    let value = |s: &str| s.replace(MINUS, "-").replace(',', "").parse::<f64>().unwrap_or(0.0).abs();
+    if !x.is_finite() {
+        return js_number(x);
+    }
+    let a = x.abs();
+    for (i, (unit, suffix)) in UNITS.iter().enumerate() {
+        if a < *unit {
+            continue;
+        }
+        let scaled = sig3.format(x / unit);
+        if value(&scaled) >= 1000.0 && i > 0 {
+            let (up, up_suffix) = UNITS[i - 1];
+            return format!("{}{up_suffix}", sig3.format(x / up));
+        }
+        return format!("{scaled}{suffix}");
+    }
+    let s = small.format(x);
+    if value(&s) >= 1000.0 {
+        return format!("{}k", sig3.format(x / 1e3));
+    }
+    s
+}
+
 pub fn format(spec: &str, x: f64) -> String {
     Format::new(spec).format(x)
 }
@@ -261,6 +300,19 @@ pub fn js_number(n: f64) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn short_matches_the_browser() {
+        let f = super::Format::new("short");
+        let cases: [(f64, &str); 12] = [
+            (0.0, "0"), (12.5, "12.5"), (585.0, "585"), (1000.0, "1k"), (369_500.0, "370k"),
+            (1_234_567.0, "1.23M"), (4_500_000_000.0, "4.5B"), (2e12, "2T"), (999.996, "1k"),
+            (999_999.0, "1M"), (-369_500.0, "\u{2212}370k"), (-585.0, "\u{2212}585"),
+        ];
+        for (x, want) in cases {
+            assert_eq!(f.format(x), want, "{x}");
+        }
+    }
+
     use super::format;
 
     #[test]
